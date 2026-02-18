@@ -1,0 +1,19 @@
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# data
+*.fits
+*.ms
+*.npz
+*.npy
+*.h5
+
+# results
+chains/
+output/
+figures/
+
+# mac
+.DS_Store
