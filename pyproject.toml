@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glint"
+version = "0.1.0"
+description = "Gravitational Lensing Interferometric Tomography"
+authors = [
+    { name = "Akiyoshi Tsujita" }
+]
+requires-python = ">=3.10"
