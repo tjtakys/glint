@@ -1,8 +1,5 @@
 <p align="center">
-  <img src="docs/logo/logo.png" width="840">
-</p>
-<p align="center">
-Gravitational-Lens Interferometric Tomography
+  <img src="docs/logo/logo.png" width="600">
 </p>
 
 # GLINT
