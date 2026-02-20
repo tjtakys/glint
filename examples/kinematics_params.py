@@ -12,11 +12,11 @@ param_table = np.array([
     [40,     10,     70],   # inc_deg
     [60,     0,      180],  # pa_deg
     [0.1,    0.05,   0.5],  # r_scale
-    [300,    50,     500],  # v_c
+    [300,    200,    500],  # v_c
     [0.1,    0.01,   0.5],  # r_turn
     # [1.0,    0.5,    1.5],  # beta_curve
     [2.0,    1.5,   3.5],  # gamma_curve
-    [50,     10,    180],  # sigma_0
+    [60,     50,    180],  # sigma_0
     [0.1,    0.05,   0.8],  # r_sigma
     [0.0,    -50,    50],   # vsys_kms
     # [x0_l,   x0_l-dd_l, x0_l+dd_l],  # x_l
