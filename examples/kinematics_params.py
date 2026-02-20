@@ -26,7 +26,7 @@ param_table = np.array([
     [0.0,    0.0,    np.pi], # pa_l
     [-2,   -5,    -1],   # log_gamma
     [0.0,   0.0,    np.pi/2],   # pa_gamma
-])
+]).astype(float)
 
 # lb = param_table[:,1]
 # ub = param_table[:,2]
