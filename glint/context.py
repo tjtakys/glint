@@ -57,7 +57,7 @@ class ImageContext:
     radius_arcsec: np.ndarray = None  # shape (nr,)
 
     # clean beam kernel (2D) [pix, pix]：image-domain で畳み込みするなら
-    beam_kernel: Optional[np.ndarray] = None
+    beam: Optional[np.ndarray] = None
 
     def __post_init__(self):
         object.__setattr__(self, "xx_img", _as_float32_c(self.xx_img))
@@ -73,8 +73,8 @@ class ImageContext:
             raise ValueError("ImageContext.radius_arcsec must be provided.")
         object.__setattr__(self, "radius_arcsec", _as_float32_c(self.radius_arcsec))
 
-        if self.beam_kernel is not None:
-            object.__setattr__(self, "beam_kernel", np.asarray(self.beam_kernel, dtype=np.float32, order="C"))
+        if self.beam is not None:
+            object.__setattr__(self, "beam", np.asarray(self.beam, dtype=np.float32, order="C"))
 
         # sanity checks
         if self.xx_img.shape != self.yy_img.shape:
