@@ -17,3 +17,8 @@ figures/
 
 # mac
 .DS_Store
+
+# packaging
+*.egg-info/
+dist/
+build/
