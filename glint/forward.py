@@ -6,7 +6,7 @@ from .context import ImageContext
 from . import lensing as ls
 from .source import make_rotating_disk_cube, Vrot_Courteau1997
 
-def forward_model_cube(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def forward_model_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Image-plane forward model.
     Parameters
@@ -81,7 +81,9 @@ def forward_model_cube(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarra
         # lensed_image_conv = convolve2d(lensed_cube[i], beam, mode='same', boundary='fill', fillvalue=0)
         # lensed_cube_conv[i] = lensed_image_conv
 
-        # fftconvolve
+        # fftconvolve (much faster)
         lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam, mode='same')
 
     return source_cube, lensed_cube, lensed_cube_conv
+
+
