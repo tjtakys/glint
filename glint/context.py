@@ -31,6 +31,7 @@ class ImageContext:
       - lens center（x0_l, y0_l）
       - beam（image fitting で使うなら）
     """
+    # ------------- Common for both of 2D and 3D -------------
     # grids [arcsec]
     xx_img: np.ndarray
     yy_img: np.ndarray
@@ -49,15 +50,16 @@ class ImageContext:
     x0_l: float = 0.0
     y0_l: float = 0.0
 
-    # spectral axis
-    vchan_kms: np.ndarray = None  # shape (nchan,)
-    spec_res_sgm_kms: float = 0.0  # channel width [km/s]
-
-    # radial grid (disk modelで使う)
-    radius_arcsec: np.ndarray = None  # shape (nr,)
-
     # clean beam kernel (2D) [pix, pix]：image-domain で畳み込みするなら
-    beam: Optional[np.ndarray] = None
+    beam: np.ndarray = None
+
+    # ------------- 3D only -------------
+    # spectral axis
+    vchan_kms: Optional[np.ndarray] = None  # shape (nchan,)
+    spec_res_sgm_kms: Optional[float] = None  # channel width [km/s]
+
+    # radial grid
+    radius_arcsec: Optional[np.ndarray] = None  # shape (nr,)
 
     def __post_init__(self):
         object.__setattr__(self, "xx_img", _as_float32_c(self.xx_img))
@@ -65,13 +67,12 @@ class ImageContext:
         object.__setattr__(self, "xx_src", _as_float32_c(self.xx_src))
         object.__setattr__(self, "yy_src", _as_float32_c(self.yy_src))
 
-        if self.vchan_kms is None:
-            raise ValueError("ImageContext.vchan_kms must be provided.")
-        object.__setattr__(self, "vchan_kms", _as_float32_c(self.vchan_kms))
+        # optinal arrays
+        if self.vchan_kms is not None:
+            object.__setattr__(self, "vchan_kms", _as_float32_c(self.vchan_kms))
 
-        if self.radius_arcsec is None:
-            raise ValueError("ImageContext.radius_arcsec must be provided.")
-        object.__setattr__(self, "radius_arcsec", _as_float32_c(self.radius_arcsec))
+        if self.radius_arcsec is not None:
+            object.__setattr__(self, "radius_arcsec", _as_float32_c(self.radius_arcsec))
 
         if self.beam is not None:
             object.__setattr__(self, "beam", np.asarray(self.beam, dtype=np.float32, order="C"))
@@ -88,6 +89,8 @@ class ImageContext:
 
     @property
     def nchan(self) -> int:
+        if self.vchan_kms is None:
+            raise ValueError("vchan_kms is not set.")
         return int(self.vchan_kms.size)
 
     @property

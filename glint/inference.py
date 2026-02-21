@@ -113,6 +113,7 @@ def run_emcee(logprob_fn, x0, lb, ub, *, nwalkers=None, burnin=2000, production=
     # last-step logprob stats across walkers
     lp_last = logprob[-1]
     finite_last = np.isfinite(lp_last)
+    # max - median が（桁が違うくらい）全然違うと、一部が外れている可能性高い
     print(f"logprob (last step): finite fraction={np.mean(finite_last):.3f}, "
           f"median={np.median(lp_last[finite_last]):.3f}, max={np.max(lp_last[finite_last]):.3f}")
 
@@ -122,7 +123,7 @@ def run_emcee(logprob_fn, x0, lb, ub, *, nwalkers=None, burnin=2000, production=
     print(f"worst {k} walkers (by last logprob):", order[:k].tolist())
     print(f"best  {k} walkers (by last logprob):", order[-k:].tolist())
 
-    # --- Quick stationarity check: compare early vs late halves (per parameter) ---
+    # --- Quick stationarity check: compare early vs late halves (per parameter) 要は前半と後半で分布がずれていないか ---
     flat = chain.reshape(nsteps * nwalkers, ndim)  # includes all steps
     half = nsteps // 2
     flat1 = chain[:half].reshape(half * nwalkers, ndim)
@@ -132,9 +133,13 @@ def run_emcee(logprob_fn, x0, lb, ub, *, nwalkers=None, burnin=2000, production=
     mean2 = np.mean(flat2, axis=0)
     std2  = np.std(flat2, axis=0) + 1e-30  # avoid /0
     z = np.abs(mean2 - mean1) / std2
+    # median<0.3 & max<1くらいならまあ同じ分布からのサンプルっぽい。max>3とかだと一部のパラメータが全然収束してない可能性がある。
     print(f"stationarity (|Δmean|/std in last half): median={np.median(z):.2f}, max={np.max(z):.2f}")
 
     # --- Autocorr time / ESS (use only last half to avoid transient; may fail) ---
+    # tauは独立サンプルになるまでのステップ数、小さいほど嬉しいが、縮退が強いと大きくなりがち
+    # N/tau: >50だと安心、>20くらいはほしい。<10だとあまり信用できない
+    # ESS: >500くらいあればまあOK、>1000くらいあると安心。>2000だと素晴らしい、<200だと危険（誤差がぶれやすい）
     try:
         tau = sampler.get_autocorr_time(tol=0)  # ndarray (ndim,)
         # Effective samples ~ (nsteps*nwalkers) / tau
