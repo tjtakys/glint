@@ -2,11 +2,106 @@ from __future__ import annotations
 import numpy as np
 from typing import Tuple
 from scipy.signal import fftconvolve
+from scipy.fft import fftn, ifftn
 from .context import ImageContext
 from . import lensing as ls
-from .source import make_rotating_disk_cube, Vrot_Courteau1997
+from .source import make_rotating_disk_cube, Vrot_Courteau1997, sersic2d
 
-def forward_model_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+
+def forward_model_2D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Image-plane forward model.
+    Parameters
+    ----------
+    params : array-like
+      [x_s, y_s, F_0, ellip, pa_deg, r_eff, n,
+       (x0, y0), # optional: lens center (HST Gaussian fitとかで固定するなら),
+       b, q_l, pa_l, log_gamma, pa_gamma]
+      単位: arcsec, deg, km/s, rad
+
+    ctx : ImageContext
+      固定の観測/グリッド情報
+
+    Returns
+    -------
+    source_map       : (ny_src, nx_src)  Jy/arcsec^2
+    lensed_map       : (ny_img, nx_img)  Jy/pix
+    lensed_map_conv  : (ny_img, nx_img)  (beam_kernelがあれば畳み込み後)
+    """
+    p = np.asarray(params, dtype=float)
+
+    x_s, y_s, F_0, ellip, pa_deg, r_eff, n, \
+        b, q_l, pa_l, log_gamma, pa_gamma = p
+
+    # deflection angle
+    alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
+        xx=ctx.xx_img, yy=ctx.yy_img,
+        # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
+        x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
+    )
+
+    beta_x_as, beta_y_as = ctx.xx_img - alpha_x_as, ctx.yy_img - alpha_y_as
+    # beta_x_as, beta_y_as = ctx.xx_img, ctx.yy_img # for testing without lensing deflection
+
+    # source model (Jy/arcsec^2)
+    source_map = sersic2d(
+        x=ctx.xx_src, y=ctx.yy_src,
+        I=F_0,
+        x0=x_s, y0=y_s,
+        ellip=ellip, pa=pa_deg, 
+        r_eff=r_eff, 
+        n=n
+    )
+
+    # map to lensed image (Jy/arcsec^2)
+    lensed_map = ls.map_source_to_image(
+        beta_x_arcsec=beta_x_as, beta_y_arcsec=beta_y_as,
+        source_image=source_map, src_pixscale_arcsec=ctx.pixsize_src, order=1,
+        x0_src_arcsec=ctx.x0_src, y0_src_arcsec=ctx.y0_src)
+    
+    
+    # Jy/arcsec^2 -> Jy/pixel
+    lensed_map *= (ctx.pixsize_img**2)
+
+    # convolve with clean beam (Jy/pixel -> Jy/beam)
+    lensed_map_conv = fftconvolve(lensed_map, ctx.beam, mode='same')
+    
+    return source_map, lensed_map, lensed_map_conv
+
+
+def _fftconvolve_nd(data: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    """
+    dataは2D or 3D (cube) のどちらでもOK。3Dの場合、for loopで各チャンネルに2D convolutionを行うより早くなるはず。 --> 試したけど、むしろ遅くなる？？
+    """
+    if data.ndim == 2:
+        data_in = data[None, ...]  # (1, ny, nx)
+        squeeze = True
+    else:
+        data_in = data  # (nchan, ny, nx)
+        squeeze = False
+    
+    nchan, ny, nx = data_in.shape
+    ky, kx = kernel.shape
+    Ly, Lx = ny + ky - 1, nx + kx - 1
+
+    # FFT
+    X = fftn(data_in, s=(Ly, Lx), axes=(-2, -1))
+    K = fftn(kernel, s=(Ly, Lx), axes=(-2, -1))
+    Y = ifftn(X * K, axes=(-2, -1)).real
+
+    # "same" crop: take the central ny,nx region
+    y0 = (ky - 1) // 2
+    x0 = (kx - 1) // 2
+    out = Y[:, y0:y0 + ny, x0:x0 + nx]
+
+    return out[0] if squeeze else out
+
+
+
+
+def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Image-plane forward model.
     Parameters
@@ -77,12 +172,15 @@ def forward_model_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.ndarr
     # convolve with clean beam (Jy/pixel -> Jy/beam)
     lensed_cube_conv = np.zeros_like(lensed_cube)
     for i in range(len(ctx.vchan_kms)):
-        # image convolution using astropy.convolution.convolve
+        # # image convolution using astropy.convolution.convolve
         # lensed_image_conv = convolve2d(lensed_cube[i], beam, mode='same', boundary='fill', fillvalue=0)
         # lensed_cube_conv[i] = lensed_image_conv
 
         # fftconvolve (much faster)
         lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam, mode='same')
+    
+    # 3D convolution (fftconvolve_nd) --- 試したけど、むしろ遅くなる？？
+    # lensed_cube_conv = _fftconvolve_nd(lensed_cube, ctx.beam)
 
     return source_cube, lensed_cube, lensed_cube_conv
 
