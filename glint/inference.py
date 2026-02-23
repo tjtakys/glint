@@ -8,7 +8,36 @@ from typing import Callable, Optional, Tuple, Dict, Any
 
 import numpy as np
 import multiprocessing as mp
+from scipy.optimize import least_squares
 import emcee
+
+
+# ------------------- fitting utilities -------------------
+def run_least_squares(residual_fn, x0, lb, ub, *, ftol=1e-6, xtol=1e-6, gtol=1e-6, max_nfev=1000):
+    """
+    residual_fn(theta) は、観測データとモデルの差を返すベクトル関数（例: (obs - model) / noise）。
+    method = "trf" (default) 
+    """
+    x0 = np.asarray(x0, float)
+    lb = np.asarray(lb, float)
+    ub = np.asarray(ub, float)
+
+    result = least_squares(
+        residual_fn, 
+        x0=x0, 
+        bounds=(lb, ub), 
+        method="trf",
+        x_scale='jac',
+        ftol=ftol, xtol=xtol, gtol=gtol, 
+        max_nfev=max_nfev,
+        verbose=2
+    )
+    print("success:", result.success, result.message)
+    return result
+
+
+
+# ------------------- MCMC utilities -------------------
 
 LogProbFn = Callable[[np.ndarray], float]
 
