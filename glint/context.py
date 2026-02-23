@@ -84,8 +84,6 @@ class ImageContext:
             raise ValueError("xx_src and yy_src must have same shape.")
         if self.pixsize_img <= 0 or self.pixsize_src <= 0:
             raise ValueError("pixsize_img/pixsize_src must be > 0.")
-        if self.spec_res_sgm_kms <= 0:
-            raise ValueError("spec_res_sgm_kms must be > 0.")
 
     @property
     def nchan(self) -> int:
