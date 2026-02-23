@@ -3,7 +3,7 @@ import numpy as np
 param_names = ["x_s", "y_s", "F_0", "ellip", "pa_deg", "r_eff", "n",
                "b", "q_l", "pa_l", "log_gamma", "pa_gamma"]
 
-
+# initial guess, lower bound, upper bound
 param_table = np.array([
     [0.0175,  -0.2,   0.2],  # x_s
     [0.0275,  -0.2,   0.2],  # y_s
