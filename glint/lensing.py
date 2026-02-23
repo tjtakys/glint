@@ -180,8 +180,8 @@ def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
     y0_pix = (ny-1)/2.0
 
     yy_idx, xx_idx = np.indices((ny, nx))
-    xx_as =  (xx_idx - x0_pix) * pixscale_arcsec + x0_arcsec # +x corresponds to West  (-RA)  on the sky
-    yy_as = -(yy_idx - y0_pix) * pixscale_arcsec + y0_arcsec # +y corresponds to North (+Dec) on the sky
+    xx_as = (xx_idx - x0_pix) * pixscale_arcsec + x0_arcsec # +x corresponds to West  (-RA)  on the sky
+    yy_as = (yy_idx - y0_pix) * pixscale_arcsec + y0_arcsec # 向きが観測画像と合うように
 
     return xx_as, yy_as
 
@@ -245,7 +245,7 @@ def map_source_to_image(beta_x_arcsec, beta_y_arcsec, source_image,
 
     # Convert beta coordinates to pixel indices in the source image
     beta_x_pix = (beta_x_arcsec - x0_src_arcsec) / src_pixscale_arcsec + x0_src_pix
-    beta_y_pix = (beta_y_arcsec - y0_src_arcsec) / src_pixscale_arcsec + y0_src_pix
+    beta_y_pix = (beta_y_arcsec - y0_src_arcsec) / src_pixscale_arcsec + y0_src_pix # 向きが観測画像と合うように
 
     # Prepare coordinates for interpolation
     coords = np.array([beta_y_pix.ravel(), beta_x_pix.ravel()])  # (2, N)
