@@ -10,3 +10,6 @@ authors = [
     { name = "Akiyoshi Tsujita" }
 ]
 requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = {find = {include = ["glint", "glint.*"]}}
