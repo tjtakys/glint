@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple, List
 import numpy as np
+import finufft
 
 # -----------------------------
 # Utility
@@ -17,7 +18,7 @@ def _as_bool(a: np.ndarray) -> np.ndarray:
 
 
 # -----------------------------
-# Contexts
+# Image Contexts
 # -----------------------------
 @dataclass(frozen=True, slots=True)
 class ImageContext:
@@ -51,7 +52,7 @@ class ImageContext:
     y0_l: float = 0.0
 
     # clean beam kernel (2D) [pix, pix]：image-domain で畳み込みするなら
-    beam: np.ndarray = None
+    beam: Optional[np.ndarray] = None
 
     # ------------- 3D only -------------
     # spectral axis
@@ -60,6 +61,11 @@ class ImageContext:
 
     # radial grid
     radius_arcsec: Optional[np.ndarray] = None  # shape (nr,)
+
+    # fixed parameters
+    x_s: Optional[float] = None
+    y_s: Optional[float] = None
+    inc_deg: Optional[float] = None
 
     def __post_init__(self):
         object.__setattr__(self, "xx_img", _as_float32_c(self.xx_img))
@@ -100,12 +106,17 @@ class ImageContext:
         return (int(self.xx_src.shape[0]), int(self.xx_src.shape[1]))
 
 
+
+
+# -----------------------------
+# UV Contexts
+# -----------------------------
 @dataclass(frozen=True, slots=True)
 class UVContext:
     """
     visibility-domain forward model の固定変数。
 
-    観測の固定部分だけ入れる：
+    FFTの固定部分だけ入れる：
       - primary beam (pb)
       - FINUFFT plans / slices / Ntot
       - flag
@@ -135,11 +146,13 @@ class UVContext:
 
         if len(self.plans) != self.nchan:
             raise ValueError("len(plans) must equal nchan.")
+        
         if len(self.slices) != self.nchan:
             raise ValueError("len(slices) must equal nchan.")
 
         if self.Ntot < 0:
             raise ValueError("Ntot must be >= 0.")
+        
         if self.pb.ndim != 2:
             raise ValueError("pb must be 2D (ny_img, nx_img).")
 
@@ -147,38 +160,65 @@ class UVContext:
 # -----------------------------
 # Builders
 # -----------------------------
-def build_uv_layout(u: np.ndarray, v: np.ndarray, flag: np.ndarray) -> Tuple[List[Optional[Tuple[np.ndarray, np.ndarray]]], List[Optional[slice]], int]:
+def build_uv_layout(
+        u: np.ndarray, 
+        v: np.ndarray, 
+        flag: np.ndarray
+) -> Tuple[List[Optional[Tuple[np.ndarray, np.ndarray]]], 
+           List[Optional[slice]], 
+           int]:
     """
-    uv_list / slices / Ntot
-    を作るだけの関数（Planの作成は別関数に分離）。
-
-    Parameters
-    ----------
-    u, v : arrays shaped (nchan, nrow) [in wavelengths]
-    flag : bool array shaped (nchan, nrow) True=flagged
-
-    Returns
-    -------
-    uv_list : list[(kx,ky)|None], where kx=2πu, ky=2πv (float32)
-    slices  : list[slice|None]
-    Ntot    : total unflagged count
+    k_list / slices / Ntot を作る
     """
     nchan = u.shape[0]
-    uv_list: List[Optional[Tuple[np.ndarray, np.ndarray]]] = []
+
+    k_list: List[Optional[Tuple[np.ndarray, np.ndarray]]] = []
     slices: List[Optional[slice]] = []
+
     start = 0
 
     for i in range(nchan):
         m = ~flag[i]
         ni = int(m.sum())
         if ni == 0:
-            uv_list.append(None)
+            k_list.append(None)
             slices.append(None)
             continue
         kx = (2.0 * np.pi * u[i, m]).astype(np.float32, order="C")
         ky = (2.0 * np.pi * v[i, m]).astype(np.float32, order="C")
-        uv_list.append((kx, ky))
+        k_list.append((kx, ky))
         slices.append(slice(start, start + ni))
         start += ni
 
-    return uv_list, slices, start
+    return k_list, slices, start
+
+
+def build_finufft_plans(
+    k_list: List[Optional[Tuple[np.ndarray, np.ndarray]]],
+    l_rad: np.ndarray,
+    m_rad: np.ndarray,
+    eps: float = 1e-6
+) -> List[Optional[object]]:
+    """
+    チャンネルごとにuvは一定なので、計算を早くするためにFINUFFTのPlanを作る
+    """
+
+    nchan = len(k_list)
+    plans = [None] * nchan
+
+    for i in range(nchan):
+        if k_list[i] is None:
+            continue
+        kx, ky = k_list[i]
+        p = finufft.Plan(
+            nufft_type=3,
+            n_modes_or_dim=2,  # 2D
+            isign=+1,
+            eps=eps,
+            dtype=np.complex64
+        )
+    
+        p.setpts(x=l_rad, y=m_rad, s=kx, t=ky)
+        plans[i] = p
+
+    return plans
