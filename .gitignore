@@ -9,6 +9,11 @@ __pycache__/
 *.npz
 *.npy
 *.h5
+configuration_files/
+sim_imaging/
+
+# CASA log
+casa-*.log
 
 # results
 chains/
