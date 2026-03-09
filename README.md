@@ -11,3 +11,15 @@ GLINT is an image- and visibility-domain reconstruction framework designed for g
 The code performs forward modeling to recover the intrinsic kinematic structure of lensed galaxies using parametric kinematic models. In addition, GLINT supports pixelized source reconstruction through semi-linear inversion, enabling non-parametric recovery of the source-plane emission while keeping the lens model fixed.
 
 The framework is particularly suited for spatially and spectrally resolved line observations of strongly lensed galaxies.
+
+## Requirements
+
+The main dependencies of GLINT include:
+
+- modular CASA
+- NumPy
+- SciPy
+- Matplotlib
+- emcee
+- Astropy
+- FINUFFT
