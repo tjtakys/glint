@@ -125,7 +125,7 @@ class UVContext:
     pb: np.ndarray
 
     # FINUFFT plans per channel: list[Plan|None]
-    plans: Sequence[object]
+    plans: Sequence[Optional[object]]
 
     # Flatten layout for concatenated vis: list[slice|None] (per channel)
     slices: Sequence[Optional[slice]]

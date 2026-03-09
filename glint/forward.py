@@ -3,7 +3,7 @@ import numpy as np
 from typing import Tuple
 from scipy.signal import fftconvolve
 from scipy.fft import fftn, ifftn
-from .context import ImageContext
+from .context import ImageContext, UVContext
 from . import lensing as ls
 from .source import make_rotating_disk_cube, Vrot_Courteau1997, sersic2d
 
@@ -124,17 +124,26 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     """
     p = np.asarray(params, dtype=float)
 
-    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
     # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms, \
         # x_l, y_l, b, q_l, pa_l, log_gamma, pa_gamma = params
-    x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms, \
-        b, q_l, pa_l, log_gamma, pa_gamma = p
+    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    #     b, q_l, pa_l, log_gamma, pa_gamma = p
+    # x_s, y_s inc_deg --> fix
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    #     b, q_l, pa_l, log_gamma, pa_gamma = p
+
+    # x_s, y_s inc_deg --> fix
+    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+        b, log_gamma, pa_gamma = p
+
 
     # deflection angle
     alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
         xx=ctx.xx_img, yy=ctx.yy_img,
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
-        x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        # x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
         log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
     )
     beta_x_as, beta_y_as = ctx.xx_img - alpha_x_as, ctx.yy_img - alpha_y_as
@@ -142,15 +151,17 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # source model (Jy/arcsec^2)
     radius = ctx.radius_arcsec
     sb_profile = F_0 * np.exp(-1 * radius/r_scale)
-    # vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
-    vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=1.0)
+    vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
+    # vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=1.0)
     sigma_profile = sigma_0 * np.exp(-1 * radius/r_sigma)
     source_cube = make_rotating_disk_cube(
         XX=ctx.xx_src, YY=ctx.yy_src,
-        x0=x_s, y0=y_s,
+        # x0=x_s, y0=y_s,
+        x0=ctx.x_s, y0=ctx.y_s,
         vchan_kms=ctx.vchan_kms,
         spec_res_sgm_kms=ctx.spec_res_sgm_kms,
-        inc_deg=inc_deg,
+        # inc_deg=inc_deg,
+        inc_deg=ctx.inc_deg,
         pa_deg=pa_deg,
         radius=radius,
         sb_profile=sb_profile,
@@ -162,7 +173,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # map to lensed image (Jy/arcsec^2)
     lensed_cube = ls.map_source_to_image_cube(
         beta_x_arcsec=beta_x_as, beta_y_arcsec=beta_y_as,
-        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=1,
+        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=2,
         x0_src_arcsec=ctx.x0_src, y0_src_arcsec=ctx.y0_src)
     
     
@@ -185,3 +196,91 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     return source_cube, lensed_cube, lensed_cube_conv
 
 
+
+
+def forward_model_3D_uv(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVContext) -> np.ndarray:
+    """
+    params = [x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms  # rotating disk 
+              x_l, y_l, b, q_l, pa_l, log_gamma, pa_gamma] # lens
+    単位は arcsec・rad
+    """
+    p = np.asarray(params, dtype=float)
+
+    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+        # x_l, y_l, b, q_l, pa_l, log_gamma, pa_gamma = params
+    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    # x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    #     b, q_l, pa_l, log_gamma, pa_gamma = p
+    # x_s, y_s inc_deg --> fix
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    #     b, q_l, pa_l, log_gamma, pa_gamma = p
+
+    # x_s, y_s inc_deg --> fix
+    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+        b, log_gamma, pa_gamma = p
+
+
+    # deflection angle
+    alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
+        xx=img_ctx.xx_img, yy=img_ctx.yy_img,
+        # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
+        # x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
+        log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
+    )
+    beta_x_as, beta_y_as = img_ctx.xx_img - alpha_x_as, img_ctx.yy_img - alpha_y_as
+
+    # source model (Jy/arcsec^2)
+    radius = img_ctx.radius_arcsec
+    sb_profile = F_0 * np.exp(-1 * radius/r_scale)
+    vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
+    # vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=1.0)
+    sigma_profile = sigma_0 * np.exp(-1 * radius/r_sigma)
+    source_cube = make_rotating_disk_cube(
+        XX=img_ctx.xx_src, YY=img_ctx.yy_src,
+        # x0=x_s, y0=y_s,
+        x0=img_ctx.x_s, y0=img_ctx.y_s,
+        vchan_kms=img_ctx.vchan_kms,
+        spec_res_sgm_kms=img_ctx.spec_res_sgm_kms,
+        # inc_deg=inc_deg,
+        inc_deg=img_ctx.inc_deg,
+        pa_deg=pa_deg,
+        radius=radius,
+        sb_profile=sb_profile,
+        vrot_profile=vrot_profile,
+        sigma_profile=sigma_profile,
+        systemic_kms=vsys_kms,
+    )
+
+    # map to lensed image (Jy/arcsec^2)
+    lensed_cube = ls.map_source_to_image_cube(
+        beta_x_arcsec=beta_x_as, beta_y_arcsec=beta_y_as,
+        source_cube=source_cube, src_pixscale_arcsec=img_ctx.pixsize_src, order=2,
+        x0_src_arcsec=img_ctx.x0_src, y0_src_arcsec=img_ctx.y0_src)
+    
+    
+    # Jy/arcsec^2 -> Jy/pixel
+    lensed_cube *= (img_ctx.pixsize_img**2)
+    
+    # apply primary beam
+    lensed_cube *= uv_ctx.pb
+
+    # Jy/arcsec^2 -> Jy/pix
+    lensed_cube *= (img_ctx.pixsize_img**2)
+
+    # to visibility for each channel
+    lensed_vis = np.empty(uv_ctx.Ntot, dtype=np.complex64)
+    # return lensed_cube
+
+    for i in range(uv_ctx.nchan):
+        p = uv_ctx.plans[i]
+        if p is None:
+            continue
+
+        sl = uv_ctx.slices[i]
+
+        # lensed_vis_i = image_to_vis_finufft_type3(I=lensed_cube[i], xx_as=l_as, yy_as=m_as, u=u[i,m], v=v[i,m], eps=1e-6)
+        cj = lensed_cube[i].ravel().astype(np.complex64, order="C")
+        lensed_vis[sl] = p.execute(cj)
+
+    return lensed_vis
