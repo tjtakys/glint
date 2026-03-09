@@ -198,7 +198,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
 
 
 
-def forward_model_3D_uv(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVContext) -> np.ndarray:
+def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVContext) -> np.ndarray:
     """
     params = [x_s, y_s, F_0, inc_deg, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms  # rotating disk 
               x_l, y_l, b, q_l, pa_l, log_gamma, pa_gamma] # lens
