@@ -259,9 +259,6 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
         x0_src_arcsec=img_ctx.x0_src, y0_src_arcsec=img_ctx.y0_src)
     
     
-    # Jy/arcsec^2 -> Jy/pixel
-    lensed_cube *= (img_ctx.pixsize_img**2)
-    
     # apply primary beam
     lensed_cube *= uv_ctx.pb
 

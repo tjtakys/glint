@@ -184,7 +184,7 @@ def build_uv_layout(
             k_list.append(None)
             slices.append(None)
             continue
-        kx = (2.0 * np.pi * u[i, m]).astype(np.float32, order="C")
+        kx = -(2.0 * np.pi * u[i, m]).astype(np.float32, order="C")
         ky = (2.0 * np.pi * v[i, m]).astype(np.float32, order="C")
         k_list.append((kx, ky))
         slices.append(slice(start, start + ni))
