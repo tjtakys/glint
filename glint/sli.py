@@ -8,10 +8,8 @@ As = d となるAを作れば、あとは、s = (A^T A)^{-1} A^T d で source pl
 
 import numpy as np
 from scipy.sparse import csr_matrix
+from scipy.linalg import solve
 
-
-import numpy as np
-from scipy.sparse import csr_matrix
 
 def build_matrix_lensing(
     beta_x_arcsec: np.ndarray,
@@ -20,7 +18,7 @@ def build_matrix_lensing(
     ctx,
 ) -> csr_matrix:
     """
-    lensing matrix L を作る（bilinear interpolation の係数を sparse 行列にする）
+    lensing matrix L を作る。すなわちbilinear interpolation の係数を sparse 行列にする。
 
     I_img(masked) = L @ S_src(flat)
 
@@ -69,7 +67,7 @@ def build_matrix_lensing(
     dy = by_pix - j0
 
     # 4近傍 (i0,j0), (i0+1,j0), (i0,j0+1), (i0+1,j0+1) の重み
-    # これが L の非ゼロ要素になる（各行最大4つ）
+    # これが L の非ゼロ要素になる（各行4つ）
     w00 = (1 - dx) * (1 - dy)
     w10 = (dx)     * (1 - dy)
     w01 = (1 - dx) * (dy)
@@ -88,7 +86,7 @@ def build_matrix_lensing(
     w00 = w00[inside]; w10 = w10[inside]; w01 = w01[inside]; w11 = w11[inside]
 
     # 有効な行数
-    Nvalid = rows.size
+    # Nvalid = rows.size
 
     # source pixel の「flatten index」を作る
     # flatten規約：index = j*nx + i  （yが先、xが後）
@@ -98,11 +96,11 @@ def build_matrix_lensing(
     col11 = ((j0+1) * nx_src + (i0 + 1)).astype(np.int64)
 
     # csr_matrix 用に、(row, col, data) を全部並べる
-    # 各行4要素なので、長さは 4*Nvalid
-    row_idx = np.repeat(rows, 4)  # [r,r,r,r, r,r,r,r, ...]
+    # 各行最大4要素なので、長さは 4*Nvalid
+    # row_idx = np.repeat(rows, 4)  # [r,r,r,r, r,r,r,r, ...]
+    row_idx = np.concatenate([rows, rows, rows, rows])
     col_idx = np.concatenate([col00, col10, col01, col11])
-    data    = np.concatenate([w00,  w10,  w01,  w11 ]).astype(np.float32)
-
+    data    = np.concatenate([w00,  w10,  w01,  w11]).astype(np.float64)
     # sparse 行列を作る
     # 形状は (Nimg_used, Nsrc) のままでOK
     # inside=False の行は “全部ゼロ行” になる（=寄与なし）
@@ -111,21 +109,157 @@ def build_matrix_lensing(
     return L
 
 
-
-
-
-def build_forward_matrix(lens_model, source_grid, ctx):
+def mask_source_supported_pixels(
+    beta_x_arcsec: np.ndarray,
+    beta_y_arcsec: np.ndarray,
+    mask: np.ndarray,
+    ctx,
+) -> np.ndarray:
     """
-    A = B * L (B: beam convolution, L: lensing)に基づいて前方行列を構築する。
-    後で uv-plane modelingをする際には、A = F * B * L (F: FFT, B: beam convolution, L: lensing)に拡張
+    Keep only image pixels whose 4-neighbor bilinear stencil is fully inside source grid.
     """
-    # lensing
-    A_lens = lens_model.lensing_matrix(source_grid, ctx)
+    ny_src, nx_src = ctx.xx_src.shape
+    x0_src_pix = (nx_src - 1) / 2.0
+    y0_src_pix = (ny_src - 1) / 2.0
 
-    # beam convolution
-    A_beam = lens_model.beam_convolution_matrix(ctx)
+    bx_pix = (beta_x_arcsec - ctx.x0_src) / ctx.pixsize_src + x0_src_pix
+    by_pix = (beta_y_arcsec - ctx.y0_src) / ctx.pixsize_src + y0_src_pix
 
-    # 前方行列
-    A = A_beam @ A_lens
+    i0 = np.floor(bx_pix).astype(np.int64)
+    j0 = np.floor(by_pix).astype(np.int64)
 
-    return A
+    inside = (
+        (i0 >= 0) & (i0 + 1 < nx_src) &
+        (j0 >= 0) & (j0 + 1 < ny_src)
+    )
+
+    return mask & inside
+
+# def build_forward_matrix(lens_model, source_grid, ctx):
+#     """
+#     A = B * L (B: beam convolution, L: lensing)に基づいて前方行列を構築する。
+#     後で uv-plane modelingをする際には、A = F * B * L (F: FFT, B: beam convolution, L: lensing)に拡張
+#     """
+#     # lensing
+#     A_lens = lens_model.lensing_matrix(source_grid, ctx)
+
+#     # beam convolution
+#     A_beam = lens_model.beam_convolution_matrix(ctx)
+
+#     # 前方行列
+#     A = A_beam @ A_lens
+
+#     return A
+
+def extract_masked_vector(arr2d: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Flatten 2D array using the given boolean mask."""
+    return np.asarray(arr2d, dtype=np.float64).ravel()[mask.ravel()]
+
+
+def solve_sli(
+    L: csr_matrix,
+    d: np.ndarray,
+    sigma: np.ndarray,
+    lam: float = 0.0,
+    H: np.ndarray | None = None,
+    rcond: float = 1e-12,
+):
+    """
+    Solve weighted least squares SLI:
+        s = argmin ||(d - Ls)/sigma||^2  [+ lam * s^T H s]
+
+    Parameters
+    ----------
+    L : csr_matrix, shape (Ndata, Nsrc)
+    d : (Ndata,)
+        Masked data vector.
+    sigma : (Ndata,)
+        1-sigma noise for each used image pixel.
+    lam : float
+        Regularization strength. For Phase 1, keep lam=0.
+    H : (Nsrc, Nsrc) or None
+        Regularization matrix. For Phase 1, keep H=None.
+    rcond : float
+        Small diagonal jitter for numerical stability.
+
+    Returns
+    -------
+    result : dict
+        's'        : best-fit source vector
+        'F'        : normal matrix
+        'D'        : RHS vector
+        'cov'      : inverse(F)
+        'model'    : L @ s
+        'chi2'     : chi-square
+        'ndof'     : degrees of freedom
+    """
+    d = np.asarray(d, dtype=np.float64)
+    sigma = np.asarray(sigma, dtype=np.float64)
+
+    if d.ndim != 1 or sigma.ndim != 1:
+        raise ValueError("d and sigma must be 1D arrays.")
+    if d.size != L.shape[0] or sigma.size != L.shape[0]:
+        raise ValueError("Size mismatch among L, d, sigma.")
+    if np.any(~np.isfinite(d)) or np.any(~np.isfinite(sigma)):
+        raise ValueError("d and sigma must be finite.")
+    if np.any(sigma <= 0):
+        raise ValueError("sigma must be > 0.")
+
+    w = 1.0 / sigma**2
+
+    # Weighted normal equation
+    LW = L.multiply(w[:, None])        # = W @ L
+    F = (L.T @ LW).toarray()           # = L^T W L
+    D = L.T @ (w * d)                  # = L^T W d
+    D = np.asarray(D).reshape(-1)
+
+    if H is not None and lam != 0.0:
+        F = F + lam * np.asarray(H, dtype=np.float64)
+
+    # small jitter
+    F = F + rcond * np.eye(F.shape[0])
+
+    s = solve(F, D, assume_a="sym")
+    model = np.asarray(L @ s).reshape(-1)
+    resid = (d - model) / sigma
+    chi2 = float(np.sum(resid**2))
+
+    cov = np.linalg.inv(F)
+    ndof = d.size - s.size
+
+    return {
+        "s": s,
+        "F": F,
+        "D": D,
+        "cov": cov,
+        "model": model,
+        "chi2": chi2,
+        "ndof": ndof,
+    }
+
+
+def source_vector_to_2d(s: np.ndarray, ctx) -> np.ndarray:
+    """Reshape flat source vector to 2D source image."""
+    ny_src, nx_src = ctx.xx_src.shape
+    return np.asarray(s).reshape(ny_src, nx_src)
+
+
+def predict_image_from_source(L: csr_matrix, s: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """
+    Put masked model vector back onto a full 2D image.
+    Pixels outside mask are set to 0.
+    """
+    model_masked = np.asarray(L @ s).reshape(-1)
+    out = np.zeros(mask.size, dtype=np.float64)
+    out[mask.ravel()] = model_masked
+    return out.reshape(mask.shape)
+
+
+def residual_image(data2d: np.ndarray, model2d: np.ndarray, sigma2d: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """
+    Residual image in sigma units on masked pixels, zero elsewhere.
+    """
+    out = np.zeros_like(data2d, dtype=np.float64)
+    good = mask & np.isfinite(data2d) & np.isfinite(model2d) & np.isfinite(sigma2d) & (sigma2d > 0)
+    out[good] = (data2d[good] - model2d[good]) / sigma2d[good]
+    return out
