@@ -50,7 +50,7 @@ def logprior_box(theta, lb, ub):
     return 0.0
 
 
-def make_initial_walkers(x0, lb, ub, nwalkers, seed=0, init_frac=0.2, max_tries=100000):
+def make_initial_walkers(x0, lb, ub, nwalkers, seed=0, init_frac=0.2, max_tries=10000000):
     """
     x0の周りに walker をばら撒く。範囲内に収まるまで繰り返す（clipだと端に固定化されることがあるので）
     """

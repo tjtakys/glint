@@ -174,7 +174,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # map to lensed image (Jy/arcsec^2)
     lensed_cube = ls.map_source_to_image_cube(
         beta_x_arcsec=beta_x_as, beta_y_arcsec=beta_y_as,
-        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=2,
+        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=1,
         x0_src_arcsec=ctx.x0_src, y0_src_arcsec=ctx.y0_src)
     
     
@@ -182,15 +182,29 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     lensed_cube *= (ctx.pixsize_img**2)
 
     # convolve with clean beam (Jy/pixel -> Jy/beam)
-    lensed_cube_conv = np.zeros_like(lensed_cube)
-    for i in range(len(ctx.vchan_kms)):
-        # # image convolution using astropy.convolution.convolve
-        # lensed_image_conv = convolve2d(lensed_cube[i], beam, mode='same', boundary='fill', fillvalue=0)
-        # lensed_cube_conv[i] = lensed_image_conv
+    # lensed_cube_conv = np.zeros_like(lensed_cube)
 
-        # fftconvolve (much faster)
-        lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam[i], mode='same')
-    
+    # for i in range(len(ctx.vchan_kms)):
+    #     # # image convolution using astropy.convolution.convolve
+    #     # lensed_image_conv = convolve2d(lensed_cube[i], beam, mode='same', boundary='fill', fillvalue=0)
+    #     # lensed_cube_conv[i] = lensed_image_conv
+
+    #     # fftconvolve (much faster)
+    #     lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam[i], mode='same')
+
+    Ly, Lx = ctx.fft_shape
+    ny, nx = ctx.img_shape
+    _, ky, kx = ctx.beam.shape
+
+    # convolve in FFT space
+    lensed_cube_fft = fftn(lensed_cube, s=(Ly, Lx), axes=(-2, -1))
+    lensed_cube_conv_full = ifftn(lensed_cube_fft * ctx.beam_fft, axes=(-2, -1)).real
+
+    # crop back to "same" shape
+    y0 = (ky - 1) // 2
+    x0 = (kx - 1) // 2
+    lensed_cube_conv = lensed_cube_conv_full[:, y0:y0+ny, x0:x0+nx]
+
     # 3D convolution (fftconvolve_nd) --- 試したけど、むしろ遅くなる？？
     # lensed_cube_conv = _fftconvolve_nd(lensed_cube, ctx.beam)
 

@@ -4,10 +4,10 @@ from finufft import nufft2d2, nufft2d3
 
 ARCSEC2RAD = np.deg2rad(1/3600)
 
-def primary_beam(xx_as, yy_as, pb_fwhm_as):
-    r_as = np.hypot(xx_as, yy_as)
-    PB = np.exp(-4.0*np.log(2.0) * (r_as**2) / (pb_fwhm_as**2)) # ALMA technical handbook Fig 7.14
-    return PB
+# def primary_beam(xx_as, yy_as, pb_fwhm_as):
+#     r_as = np.hypot(xx_as, yy_as)
+#     PB = np.exp(-4.0*np.log(2.0) * (r_as**2) / (pb_fwhm_as**2)) # ALMA technical handbook Fig 7.14
+#     return PB
 
 def primary_beam(xx_as, yy_as, pb_fwhm_as):
     r_as = np.hypot(xx_as, yy_as)
