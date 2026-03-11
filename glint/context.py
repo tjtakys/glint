@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple, List
 import numpy as np
 import finufft
+from scipy.fft import fftn
 
 # -----------------------------
 # Utility
@@ -51,8 +52,11 @@ class ImageContext:
     x0_l: float = 0.0
     y0_l: float = 0.0
 
-    # clean beam kernel (2D) [pix, pix]：image-domain で畳み込みするなら
+    # dirty beam kernel (3D) [nch, pix, pix]：image-domain で畳み込みするなら
     beam: Optional[np.ndarray] = None
+    # cached FFT of beam
+    beam_fft: Optional[np.ndarray] = None
+    fft_shape: Optional[Tuple[int, int]] = None
 
     # ------------- 3D only -------------
     # spectral axis
@@ -81,7 +85,22 @@ class ImageContext:
             object.__setattr__(self, "radius_arcsec", _as_float32_c(self.radius_arcsec))
 
         if self.beam is not None:
-            object.__setattr__(self, "beam", np.asarray(self.beam, dtype=np.float32, order="C"))
+            beam = np.asarray(self.beam, dtype=np.float32, order="C")
+            object.__setattr__(self, "beam", beam)
+
+            # image size
+            ny, nx = self.xx_img.shape
+            # beam size
+            _, ky, kx = self.beam.shape
+
+            # Full shape
+            Ly = ny + ky - 1
+            Lx = nx + kx - 1
+
+            beam_fft = fftn(beam, s=(Ly, Lx), axes=(-2, -1)) # これで0-paddingしている
+
+            object.__setattr__(self, "beam_fft", beam_fft)
+            object.__setattr__(self, "fft_shape", (Ly, Lx))
 
         # sanity checks
         if self.xx_img.shape != self.yy_img.shape:
