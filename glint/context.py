@@ -90,8 +90,14 @@ class ImageContext:
 
             # image size
             ny, nx = self.xx_img.shape
+
             # beam size
-            _, ky, kx = self.beam.shape
+            if beam.ndim == 2:
+                ky, kx = beam.shape
+            elif beam.ndim == 3:
+                _, ky, kx = self.beam.shape
+            else:
+                raise ValueError("beam must be 2D or 3D array.")
 
             # Full shape
             Ly = ny + ky - 1
