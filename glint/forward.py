@@ -115,6 +115,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
 
     ctx : ImageContext
       固定の観測/グリッド情報
+      beam は 3D cube (nchan, ny_img, nx_img) で与える想定
 
     Returns
     -------
@@ -188,7 +189,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
         # lensed_cube_conv[i] = lensed_image_conv
 
         # fftconvolve (much faster)
-        lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam, mode='same')
+        lensed_cube_conv[i] = fftconvolve(lensed_cube[i], ctx.beam[i], mode='same')
     
     # 3D convolution (fftconvolve_nd) --- 試したけど、むしろ遅くなる？？
     # lensed_cube_conv = _fftconvolve_nd(lensed_cube, ctx.beam)
