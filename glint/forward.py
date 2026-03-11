@@ -174,7 +174,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # map to lensed image (Jy/arcsec^2)
     lensed_cube = ls.map_source_to_image_cube(
         beta_x_arcsec=beta_x_as, beta_y_arcsec=beta_y_as,
-        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=1,
+        source_cube=source_cube, src_pixscale_arcsec=ctx.pixsize_src, order=2,
         x0_src_arcsec=ctx.x0_src, y0_src_arcsec=ctx.y0_src)
     
     
