@@ -9,7 +9,7 @@ Models
 from __future__ import annotations
 import numpy as np
 
-# optional JIT
+# optional JIT  並列化するとおかしくなるのでとりあえず使わずに進める
 try:
     from numba import njit
     _HAS_NUMBA = True
