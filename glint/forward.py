@@ -135,7 +135,8 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     #     b, q_l, pa_l, log_gamma, pa_gamma = p
 
     # x_s, y_s inc_deg --> fix
-    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
         b, log_gamma, pa_gamma = p
 
 
@@ -168,7 +169,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
         sb_profile=sb_profile,
         vrot_profile=vrot_profile,
         sigma_profile=sigma_profile,
-        systemic_kms=vsys_kms,
+        systemic_kms=20,
     )
 
     # map to lensed image (Jy/arcsec^2)
@@ -231,7 +232,8 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
     #     b, q_l, pa_l, log_gamma, pa_gamma = p
 
     # x_s, y_s inc_deg --> fix
-    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
         b, log_gamma, pa_gamma = p
 
 
@@ -264,7 +266,7 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
         sb_profile=sb_profile,
         vrot_profile=vrot_profile,
         sigma_profile=sigma_profile,
-        systemic_kms=vsys_kms,
+        systemic_kms=20,
     )
 
     # map to lensed image (Jy/arcsec^2)

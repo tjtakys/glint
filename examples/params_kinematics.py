@@ -2,7 +2,8 @@ import numpy as np
 
 # param_names = ["x_s", "y_s", "F_0", "inc_deg", "pa_deg", "r_scale", "v_c", "r_turn", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
 # param_names = ["x_s", "y_s", "F_0", "inc_deg", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
-param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
+# param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
+param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma",
                "b", "log_gamma", "pa_gamma"]
             #    "b", "q_l", "pa_l", "log_gamma", "pa_gamma"]
 
@@ -22,7 +23,7 @@ param_table = np.array([
     [3,    1.0,   4.5],  # gamma_curve
     [150,     60,    200],  # sigma_0
     [0.1,    0.05,   1.5],  # r_sigma
-    [0.0,    -50,    50],   # vsys_kms
+    # [0.0,    -50,    50],   # vsys_kms
     [1.30,   1.1,   1.6],   # b
     # [0.95,   0.8,    1.0],   # q_l
     # [0.35,   0.0,    np.pi], # pa_l
