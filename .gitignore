@@ -9,6 +9,7 @@ __pycache__/
 *.npz
 *.npy
 *.h5
+*.mom?/
 configuration_files/
 sim_imaging/
 
