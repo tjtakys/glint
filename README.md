@@ -26,9 +26,7 @@ The main dependencies of GLINT include:
 
 ## Installation
 
-GLINT requires **Python 3.10 or later**.
-
 ```bash
-git clone https://github.com/your-username/glint.git
+git clone https://github.com/tjtakys/glint.git
 cd glint
 pip install -e .
