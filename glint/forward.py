@@ -136,7 +136,8 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
 
     # x_s, y_s inc_deg --> fix
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
-    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
+    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
         b, log_gamma, pa_gamma = p
 
 
@@ -153,7 +154,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # source model (Jy/arcsec^2)
     radius = ctx.radius_arcsec
     sb_profile = F_0 * np.exp(-1 * radius/r_scale)
-    vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
+    vrot_profile = Vrot_Courteau1997(r=radius, v_c=350, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
     # vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=1.0)
     sigma_profile = sigma_0 * np.exp(-1 * radius/r_sigma)
     source_cube = make_rotating_disk_cube(
@@ -233,7 +234,8 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
 
     # x_s, y_s inc_deg --> fix
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
-    F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
+    # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
+    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
         b, log_gamma, pa_gamma = p
 
 
@@ -250,7 +252,7 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
     # source model (Jy/arcsec^2)
     radius = img_ctx.radius_arcsec
     sb_profile = F_0 * np.exp(-1 * radius/r_scale)
-    vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
+    vrot_profile = Vrot_Courteau1997(r=radius, v_c=350, r_turn=r_turn, gamma=gamma_curve, beta=beta_curve)
     # vrot_profile = Vrot_Courteau1997(r=radius, v_c=v_c, r_turn=r_turn, gamma=gamma_curve, beta=1.0)
     sigma_profile = sigma_0 * np.exp(-1 * radius/r_sigma)
     source_cube = make_rotating_disk_cube(
