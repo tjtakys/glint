@@ -137,16 +137,17 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # x_s, y_s inc_deg --> fix
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
-    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
-        b, log_gamma, pa_gamma = p
+    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+        b, q_l, pa_l, log_gamma, pa_gamma = p
+        # b, log_gamma, pa_gamma = p
 
 
     # deflection angle
     alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
         xx=ctx.xx_img, yy=ctx.yy_img,
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
-        # x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
-        x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
+        x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        # x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
         log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
     )
     beta_x_as, beta_y_as = ctx.xx_img - alpha_x_as, ctx.yy_img - alpha_y_as
@@ -170,7 +171,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
         sb_profile=sb_profile,
         vrot_profile=vrot_profile,
         sigma_profile=sigma_profile,
-        systemic_kms=20,
+        systemic_kms=vsys_kms,
     )
 
     # map to lensed image (Jy/arcsec^2)
@@ -235,16 +236,17 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
     # x_s, y_s inc_deg --> fix
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
-    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
-        b, log_gamma, pa_gamma = p
+    F_0, pa_deg, r_scale, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
+        b, q_l, pa_l, log_gamma, pa_gamma = p
+        # b, log_gamma, pa_gamma = p
 
 
     # deflection angle
     alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
         xx=img_ctx.xx_img, yy=img_ctx.yy_img,
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
-        # x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
-        x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
+        x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
+        # x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
         log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
     )
     beta_x_as, beta_y_as = img_ctx.xx_img - alpha_x_as, img_ctx.yy_img - alpha_y_as
@@ -268,7 +270,7 @@ def forward_model_3D_vis(params: np.ndarray, img_ctx: ImageContext, uv_ctx: UVCo
         sb_profile=sb_profile,
         vrot_profile=vrot_profile,
         sigma_profile=sigma_profile,
-        systemic_kms=20,
+        systemic_kms=vsys_kms,
     )
 
     # map to lensed image (Jy/arcsec^2)
