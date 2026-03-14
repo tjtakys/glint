@@ -134,7 +134,7 @@ def image_to_vis_finufft_type3(
 
 # imaging to make a dirty map
 def vis_to_image_finufft_type3(
-    u, v,           # 1D arrays [wavelengths] uの向きはlと同じで、東向きが正
+    u, v,           # 1D arrays [wavelengths] already flagged!!
     V,              # 1D array [Jy]
     V_weight,       # 1D array [weights]
     xx_as, yy_as,   # 2D grids [arcsec]（位相中心=0）
@@ -144,7 +144,8 @@ def vis_to_image_finufft_type3(
     Non-uniform V(u,v) --> I(x,y) （NUFFT type-3）
     I(l,m) = Re[ Σ w_i V_i exp(+2πi (u_i l + v_i m)) ] / Σ w_i
     ****位相中心はxx_as, yy_asに依存するので、fftshiftは不要****
-    CASA MSに入っているuは東向きが正のようだ。従って出力される画像も右向きが正になる。
+    CASA MSに入っているuは東向きが正。従って出力される画像も右向きが正になる。
+
     Parameters
     ----------
     u, v : 1D array
@@ -159,20 +160,20 @@ def vis_to_image_finufft_type3(
         NUFFT precision
     """
 
-    kx = 2.0 * np.pi * u
-    ky = 2.0 * np.pi * v
-    cj = (V * V_weight).astype(np.complex128)  # [Jy]
+    kx = -(2.0 * np.pi * u).astype(np.float32, order="C")
+    ky =  (2.0 * np.pi * v).astype(np.float32, order="C")
+    cj = (V * V_weight).astype(np.complex64, order="C")  # [Jy]
     # cj = V.astype(np.complex128)  # [Jy] # uniform weighting
 
-    xj = (xx_as * ARCSEC2RAD).ravel()  # [rad]
-    yj = (yy_as * ARCSEC2RAD).ravel()  # [rad]
+    xj = (xx_as * ARCSEC2RAD).ravel().astype(np.float32, order="C")  # [rad]
+    yj = (yy_as * ARCSEC2RAD).ravel().astype(np.float32, order="C")  # [rad]
 
     I = nufft2d3(x=kx, y=ky, c=cj, s=xj, t=yj, isign=+1, eps=eps).reshape(xx_as.shape)
     I /= np.sum(V_weight) # この規格化はbeamで規格化しているのと同じ
 
     # beamも作成する
     # ビームの計算はIと同じだが、cjをV_weightにする
-    cj_beam = V_weight.astype(np.complex128)
+    cj_beam = V_weight.astype(np.complex64, order="C")
     beam = nufft2d3(x=kx, y=ky, c=cj_beam, s=xj, t=yj, isign=+1, eps=eps).reshape(xx_as.shape)
     beam /= np.sum(V_weight)
 
