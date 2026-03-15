@@ -505,18 +505,76 @@ def map_curve_to_source(curve_xy, deflector, lens_params):
     return np.column_stack([bx, by])
 
 
-def compute_critical_lines_and_caustics(xx, yy, deflector, lens_params):
+def _curve_length(curve_xy):
     """
-    Compute critical lines and caustics on a regular image-plane grid.
+    Compute total polyline length.
+    """
+    if len(curve_xy) < 2:
+        return 0.0
+    d = np.diff(curve_xy, axis=0)
+    return np.sum(np.hypot(d[:, 0], d[:, 1]))
+
+
+def _filter_curves(curves, min_points=10, min_length=0.0):
+    """
+    Filter short/noisy contour segments.
+    """
+    out = []
+    for seg in curves:
+        if len(seg) < min_points:
+            continue
+        if _curve_length(seg) < min_length:
+            continue
+        out.append(seg)
+    return out
+
+
+def _arcsec_curve_to_pixel(curve_xy, pixscale_arcsec, nx, ny, x0_arcsec=0.0, y0_arcsec=0.0):
+    """
+    Convert a curve from arcsec coordinates to pixel coordinates.
 
     Parameters
     ----------
-    xx, yy : 2D ndarray
-        Regular image-plane coordinate grids [arcsec].
+    curve_xy : ndarray, shape (N,2)
+        Curve points in arcsec, columns = [x_arcsec, y_arcsec]
+    pixscale_arcsec : float
+        Pixel scale [arcsec/pix]
+    nx, ny : int
+        Image size
+    x0_arcsec, y0_arcsec : float
+        Coordinate of the grid center [arcsec]
+
+    Returns
+    -------
+    curve_pix : ndarray, shape (N,2)
+        Curve points in pixel coordinates, columns = [x_pix, y_pix]
+    """
+    x0_pix = (nx - 1) / 2.0
+    y0_pix = (ny - 1) / 2.0
+
+    x_pix = (curve_xy[:, 0] - x0_arcsec) / pixscale_arcsec + x0_pix
+    y_pix = (curve_xy[:, 1] - y0_arcsec) / pixscale_arcsec + y0_pix
+
+    return np.column_stack([x_pix, y_pix])
+
+
+def compute_critical_lines_and_caustics(ctx, deflector, lens_params,
+                                        min_points=10, min_length=0.0):
+    """
+    Compute critical lines and caustics using ImageContext.
+
+    Parameters
+    ----------
+    ctx : ImageContext
+        Context containing image-plane and source-plane grids / pixel scales.
     deflector : callable
         Deflection function, e.g. deflection_SIE or deflection_SIE_plus_ES
     lens_params : dict
         Parameters passed to deflector
+    min_points : int
+        Minimum number of contour points to keep.
+    min_length : float
+        Minimum contour length [arcsec] to keep.
 
     Returns
     -------
@@ -526,19 +584,55 @@ def compute_critical_lines_and_caustics(xx, yy, deflector, lens_params):
           "alpha_y": 2D ndarray,
           "detA": 2D ndarray,
           "mu": 2D ndarray,
-          "critical_lines": list of ndarray[(N,2)],
-          "caustics": list of ndarray[(N,2)],
+          "critical_lines": list of ndarray[(N,2)],      # arcsec
+          "caustics": list of ndarray[(N,2)],            # arcsec
+          "critical_lines_pix": list of ndarray[(N,2)],  # pixel on image plane
+          "caustics_pix": list of ndarray[(N,2)],        # pixel on source plane
         }
     """
-    alpha_x, alpha_y = deflector(xx, yy, **lens_params)
+    # deflection on image plane
+    alpha_x, alpha_y = deflector(ctx.xx_img, ctx.yy_img, **lens_params)
 
-    _, _, _, _, detA, mu = jacobian_lens_mapping(xx, yy, alpha_x, alpha_y)
+    # Jacobian / magnification
+    _, _, _, _, detA, mu = jacobian_lens_mapping(ctx.xx_img, ctx.yy_img, alpha_x, alpha_y)
 
-    critical_lines = _extract_zero_contours(xx, yy, detA, level=0.0)
+    # critical lines in image plane (arcsec)
+    critical_lines = _extract_zero_contours(ctx.xx_img, ctx.yy_img, detA, level=0.0)
+    critical_lines = _filter_curves(critical_lines, min_points=min_points, min_length=min_length)
 
+    # caustics in source plane (arcsec)
     caustics = [
         map_curve_to_source(curve, deflector, lens_params)
         for curve in critical_lines
+    ]
+    caustics = _filter_curves(caustics, min_points=min_points, min_length=min_length)
+
+    # convert to pixel coordinates
+    ny_img, nx_img = ctx.img_shape
+    ny_src, nx_src = ctx.src_shape
+
+    critical_lines_pix = [
+        _arcsec_curve_to_pixel(
+            seg,
+            pixscale_arcsec=ctx.pixsize_img,
+            nx=nx_img,
+            ny=ny_img,
+            x0_arcsec=0.0,
+            y0_arcsec=0.0,
+        )
+        for seg in critical_lines
+    ]
+
+    caustics_pix = [
+        _arcsec_curve_to_pixel(
+            seg,
+            pixscale_arcsec=ctx.pixsize_src,
+            nx=nx_src,
+            ny=ny_src,
+            x0_arcsec=ctx.x0_src,
+            y0_arcsec=ctx.y0_src,
+        )
+        for seg in caustics
     ]
 
     return {
@@ -548,4 +642,6 @@ def compute_critical_lines_and_caustics(xx, yy, deflector, lens_params):
         "mu": mu,
         "critical_lines": critical_lines,
         "caustics": caustics,
+        "critical_lines_pix": critical_lines_pix,
+        "caustics_pix": caustics_pix,
     }
