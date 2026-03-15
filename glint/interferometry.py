@@ -134,7 +134,7 @@ def image_to_vis_finufft_type3(
 
 # imaging to make a dirty map
 def vis_to_image_finufft_type3(
-    u, v,           # 1D arrays [wavelengths] already flagged!!
+    u, v,           # 1D arrays [wavelengths] ALREADY FLAGGED!!
     V,              # 1D array [Jy]
     V_weight,       # 1D array [weights]
     xx_as, yy_as,   # 2D grids [arcsec]（位相中心=0）
