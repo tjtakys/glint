@@ -4,7 +4,7 @@ import numpy as np
 # param_names = ["x_s", "y_s", "F_0", "inc_deg", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
 # param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
 # param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma",
-param_names = ["F_0", "pa_deg", "r_scale", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
+param_names = ["F_0", "pa_deg", "r_scale", "v_c", "r_turn", "beta", "gamma_curve", "sigma_0", "r_sigma", "vsys_kms",
                "b", "q_l", "pa_l", "log_gamma", "pa_gamma"]
             #    "b", "log_gamma", "pa_gamma"]
 
@@ -19,6 +19,7 @@ param_table = np.array([
     [60,     0,      180],  # pa_deg
     [0.1,    0.05,   0.5],  # r_scale
     # [300,    200,    450],  # v_c
+    [300,    200,    500],  # v_c
     [0.1,    0.005,   0.5],  # r_turn
     [0.8,    0.5, 1],  # beta_curve
     [3,    1.0,   4.5],  # gamma_curve
