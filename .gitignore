@@ -12,6 +12,7 @@ __pycache__/
 *.mom?/
 configuration_files/
 sim_imaging/
+MS/
 
 # CASA log
 casa-*.log
