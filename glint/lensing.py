@@ -176,8 +176,10 @@ def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
         Grids of sky coordinates in arcseconds.
     """
     # Center pixel indices
-    x0_pix = (nx-1)/2.0
-    y0_pix = (ny-1)/2.0
+    # x0_pix = (nx-1)/2.0
+    # y0_pix = (ny-1)/2.0
+    x0_pix = nx/2.0
+    y0_pix = ny/2.0
 
     yy_idx, xx_idx = np.indices((ny, nx))
     xx_as = (xx_idx - x0_pix) * pixscale_arcsec + x0_arcsec # +x corresponds to West  (-RA)  on the sky
