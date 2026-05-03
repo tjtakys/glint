@@ -30,4 +30,4 @@ param_table = np.array([
     [0.35,   0.0,    np.pi], # pa_l
     [-1.2,   -5,    -1],   # log_gamma
     [1.0,   0.0,    np.pi/2],   # pa_gamma
-]).astype(float)
+]).astype("float32")
