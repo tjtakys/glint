@@ -139,7 +139,6 @@ def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa)
     alpha_x = alpha_x_sie + alpha_x_es
     alpha_y = alpha_y_sie + alpha_y_es
     return alpha_x, alpha_y
-
     
 
 # -------------------------- Mapping source to image -------------------------- #
@@ -176,9 +175,9 @@ def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
         Grids of sky coordinates in arcseconds.
     """
     # Center pixel indices
-    # x0_pix = (nx-1)/2.0
+    # x0_pix = (nx-1)/2.0 # 画像の幾何的中心が原点
     # y0_pix = (ny-1)/2.0
-    x0_pix = nx/2.0
+    x0_pix = nx/2.0 # simobserveに合わせるならこっち
     y0_pix = ny/2.0
 
     yy_idx, xx_idx = np.indices((ny, nx))
