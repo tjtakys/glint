@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.special import erf, gammaincinv
+from scipy.special import erf, gammaincinv, ive, kve, i0, i1, k0, k1
 
 
 ###################
@@ -218,3 +218,168 @@ def Vrot_arctan(r, v_c, r_turn):
     """
     V_r = (2.0/np.pi) * v_c * np.arctan(r / r_turn)
     return V_r
+
+
+from astropy.constants import G
+G_KPC_KMS2_MSUN = G.to('kpc km^2 / s^2 / Msun').value  # kpc (km/s)^2 / Msun
+
+z = 6.024
+from astropy.cosmology import FlatLambdaCDM
+cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+kpc_arcsec = cosmo.angular_diameter_distance(z).to('kpc').value * np.pi / 180 / 3600
+print(f"At z={z}, 1 arcsec = {kpc_arcsec:.2f} kpc")
+
+def Vrot_exponential_disk(radius_kpc, M_disk_msun, r_disk_kpc):
+    """
+    Infinitely thin exponential disk の回転曲線 (Freeman 1970).
+
+    Parameters
+    ----------
+    radius_kpc : array-like
+        Disk-plane radius [kpc].
+    M_disk_msun : float
+        Total disk mass [Msun].
+    r_disk_kpc : float
+        Exponential scale length R_d [kpc].
+
+    Returns
+    -------
+    v_sq : ndarray
+        Circular velocity squared [km^2/s^2].
+    """
+
+    y = radius_kpc / r_disk_kpc
+    v_sq = np.zeros_like(radius_kpc, dtype=float)
+
+    bessel_term = i0(y) * k0(y) - i1(y) * k1(y)
+    v_sq = 2.0 * G_KPC_KMS2_MSUN * M_disk_msun / r_disk_kpc * y**2 * bessel_term
+
+    return v_sq
+
+
+def Vrot_hernquist_bulge(radius_kpc, M_bulge_msun, r_bulge_kpc):
+    """
+    Spherical Hernquist bulge (Hernquist 1990) の回転曲線. 
+
+    Hernquist scale radius a is converted from projected effective radius using
+    R_eff = 1.8153 a = 0.550873 a
+
+    Parameters
+    ----------
+    radius_kpc : array-like
+        Spherical radius [kpc].
+    M_bulge_msun : float
+        Total bulge mass [Msun].
+    r_bulge_kpc : float
+        Bulge scale length [kpc].
+
+    Returns
+    -------
+    Vc : ndarray
+        Circular velocity [km/s].
+    """
+
+    a_kpc = r_bulge_kpc * 0.550873
+    v_sq = G_KPC_KMS2_MSUN * M_bulge_msun * radius_kpc / (radius_kpc + a_kpc)**2
+    return v_sq
+
+
+def Vrot_disk_plus_bulge(
+    radius_kpc,
+    M_disk_msun,
+    r_disk_kpc,
+    M_bulge_msun,
+    r_eff_bulge_kpc,
+):
+    """
+    Exponential disk + Hernquist bulge の合成回転曲線.
+    Returns:
+    -------
+    Vc : ndarray
+        Circular velocity [km/s].
+    """
+    v_disk_sq = Vrot_exponential_disk(
+        radius_kpc=radius_kpc,
+        M_disk_msun=M_disk_msun,
+        r_disk_kpc=r_disk_kpc,
+    )
+    v_bulge_sq = Vrot_hernquist_bulge(
+        radius_kpc=radius_kpc,
+        M_bulge_msun=M_bulge_msun,
+        r_bulge_kpc=r_eff_bulge_kpc,
+    )
+    return np.sqrt(v_disk_sq + v_bulge_sq)
+
+
+# NFW halo (https://arxiv.org/pdf/astro-ph/9508025)
+
+# critical density
+H = cosmo.H(z=z)
+rho_crit = 3 * H**2 / 8 / np.pi / G
+
+def Vrot_nfw_halo(radius_kpc, M_200_msun, r_200_kpc, c_200):
+    """
+    Spherical NFW halo の回転曲線.
+
+    Parameters
+    ----------
+    radius_arcsec : array-like
+        Spherical radius [arcsec].
+    M_200_msun : float
+        Halo mass inside r_200 [Msun].
+    r_200_kpc : float
+        Radius enclosing M_200 [kpc].
+    c_200 : float
+        Concentration, c_200 = r_200 / r_s.
+
+    Returns
+    -------
+    Vc : ndarray
+        Circular velocity [km/s].
+    """
+
+    r_s_kpc = r_200_kpc / c_200
+    x = radius_kpc / r_s_kpc
+    f_x = np.log1p(x) - x / (1.0 + x)
+    f_c = np.log1p(c_200) - c_200 / (1.0 + c_200)
+
+    M_enc = M_200_msun * f_x / f_c
+    v_sq = np.divide(
+        G_KPC_KMS2_MSUN * M_enc,
+        radius_kpc,
+        out=np.zeros_like(radius_kpc, dtype=float),
+        where=radius_kpc > 0,
+    )
+    return v_sq
+
+
+def Vrot_disk_bulge_halo(
+    radius_arcsec,
+    M_disk_msun,
+    r_disk_arcsec,
+    M_bulge_msun,
+    r_eff_bulge_arcsec,
+    M_200_msun,
+    r_200_kpc,
+    c_200,
+    kpc_per_arcsec,
+):
+    """
+    Exponential disk + Hernquist bulge + NFW halo の合成回転曲線.
+    """
+    v_disk_bulge = Vrot_disk_plus_bulge(
+        radius_arcsec=radius_arcsec,
+        M_disk_msun=M_disk_msun,
+        r_disk_arcsec=r_disk_arcsec,
+        M_bulge_msun=M_bulge_msun,
+        r_eff_bulge_arcsec=r_eff_bulge_arcsec,
+        kpc_per_arcsec=kpc_per_arcsec,
+    )
+    v_halo = Vrot_nfw_halo(
+        radius_arcsec=radius_arcsec,
+        M_200_msun=M_200_msun,
+        r_200_kpc=r_200_kpc,
+        c_200=c_200,
+        kpc_per_arcsec=kpc_per_arcsec,
+    )
+    return np.sqrt(v_disk_bulge**2 + v_halo**2)
