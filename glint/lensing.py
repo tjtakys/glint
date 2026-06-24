@@ -18,39 +18,6 @@ except Exception:
     _HAS_NUMBA = False
 
 
-@dataclass(frozen=True, slots=True)
-class DelaunaySourceMesh:
-    """
-    Adaptive source-plane mesh built from ray-traced image-plane samples.
-
-    Attributes
-    ----------
-    source_points : ndarray, shape (N, 2)
-        Ray-traced source-plane points [arcsec], columns = [beta_x, beta_y].
-    source_simplices : ndarray, shape (Ntri_src, 3)
-        Delaunay triangles in the source plane, indexing source_points.
-    image_points : ndarray, shape (N, 2)
-        Image-plane sample points [arcsec], columns = [theta_x, theta_y].
-    image_simplices : ndarray, shape (Ntri_img, 3)
-        Final adaptive image-plane triangles used for sampling.
-    detA : ndarray, shape (N,)
-        det(d beta / d theta) evaluated at image_points.
-    refined_counts : tuple of int
-        Number of triangles refined at each refinement iteration.
-    """
-
-    source_points: np.ndarray
-    source_simplices: np.ndarray
-    image_points: np.ndarray
-    image_simplices: np.ndarray
-    detA: np.ndarray
-    refined_counts: tuple[int, ...]
-
-    @property
-    def parity(self) -> np.ndarray:
-        """Parity sign at each ray-traced point."""
-        return np.sign(self.detA)
-
 
 # -------------------------- Utilities -------------------------- #
 def _rot(x: np.ndarray, y: np.ndarray, c:float, s:float) -> tuple[np.ndarray, np.ndarray]:
@@ -212,7 +179,7 @@ def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
     # Center pixel indices
     # x0_pix = (nx-1)/2.0 # 画像の幾何的中心が原点
     # y0_pix = (ny-1)/2.0
-    x0_pix = nx/2.0 # simobserveに合わせるならこっち
+    x0_pix = nx/2.0 # simobserveに合わせるならこっち、以降全てこちらに統一する
     y0_pix = ny/2.0
 
     yy_idx, xx_idx = np.indices((ny, nx))
@@ -276,8 +243,10 @@ def map_source_to_image(beta_x_arcsec, beta_y_arcsec, source_image,
 
     # Source center pixel indices
     ny_src, nx_src = source_image.shape
-    x0_src_pix = (nx_src - 1) / 2.0
-    y0_src_pix = (ny_src - 1) / 2.0
+    # x0_src_pix = (nx_src - 1) / 2.0
+    # y0_src_pix = (ny_src - 1) / 2.0
+    x0_src_pix = nx_src / 2.0 # make_grid_arcsec に統一する
+    y0_src_pix = ny_src / 2.0
 
     # Convert beta coordinates to pixel indices in the source image
     beta_x_pix = (beta_x_arcsec - x0_src_arcsec) / src_pixscale_arcsec + x0_src_pix
@@ -322,12 +291,15 @@ def map_image_to_source(beta_x_arcsec, beta_y_arcsec, image,
         Mapped source-plane image.
     hits (optional) : 2D array
         Hit count map.
+
     """
 
     # Source center pixel indices
     ny_src, nx_src = image.shape
-    x0_src_pix = (nx_src - 1) / 2.0
-    y0_src_pix = (ny_src - 1) / 2.0
+    # x0_src_pix = (nx_src - 1) / 2.0
+    # y0_src_pix = (ny_src - 1) / 2.0
+    x0_src_pix = nx_src / 2.0 # make_grid_arcsec に統一する
+    y0_src_pix = ny_src / 2.0
 
     # Convert beta coordinates to pixel indices in the source image
     beta_x_pix = (beta_x_arcsec - x0_src_arcsec) / src_pixscale_arcsec + x0_src_pix
@@ -394,14 +366,24 @@ def map_source_to_image_cube(
     -------
     image_plane : 3D array
         Mapped image-plane image cube.
+
+    Notes
+    -----
+    ``mode="constant", cval=0`` で補間する。
+    浮動小数点誤差により、本来はsource gridの境界上にある座標が、
+    ごくわずかに有効範囲外として扱われる場合がある。
+    そのため、source cubeの空間方向の端には十分なゼロ領域があることを前提とする。
+    放射がsource gridの端まで達する場合は、補間前に境界付近の座標を明示的に処理すること。
     """
 
     nch, ny_src, nx_src = source_cube.shape
-    # ny_img, nx_img = beta_x_arcsec.shape 各image-plane pixelが対応するsource-plane座標なので_imgで正しい
+    ny_img, nx_img = beta_x_arcsec.shape # 各image-plane pixelが対応するsource-plane座標なので_imgで正しい
 
     # Source center pixel indices
-    x0_src_pix = (nx_src - 1) / 2.0
-    y0_src_pix = (ny_src - 1) / 2.0
+    # x0_src_pix = (nx_src - 1) / 2.0
+    # y0_src_pix = (ny_src - 1) / 2.0
+    x0_src_pix = nx_src / 2.0 # make_grid_arcsec に統一する
+    y0_src_pix = ny_src / 2.0
 
     # Convert beta coordinates to pixel indices in the source image
     beta_x_pix = (beta_x_arcsec - x0_src_arcsec) / src_pixscale_arcsec + x0_src_pix
@@ -426,7 +408,7 @@ def map_source_to_image_cube(
     # 全channelで共通のXY座標
     coords = np.stack([beta_y_pix, beta_x_pix])
 
-    image_cube = np.empty_like(source_cube)
+    image_cube = np.empty((nch, ny_img, nx_img), dtype=source_cube.dtype)
 
     for channel in range(nch):
         image_cube[channel] = map_coordinates(
@@ -603,8 +585,10 @@ def _arcsec_curve_to_pixel(curve_xy, pixscale_arcsec, nx, ny, x0_arcsec=0.0, y0_
     curve_pix : ndarray, shape (N,2)
         Curve points in pixel coordinates, columns = [x_pix, y_pix]
     """
-    x0_pix = (nx - 1) / 2.0
-    y0_pix = (ny - 1) / 2.0
+    # x0_pix = (nx - 1) / 2.0
+    # y0_pix = (ny - 1) / 2.0
+    x0_pix = nx / 2.0 # make_grid_arcsec に統一する
+    y0_pix = ny / 2.0
 
     x_pix = (curve_xy[:, 0] - x0_arcsec) / pixscale_arcsec + x0_pix
     y_pix = (curve_xy[:, 1] - y0_arcsec) / pixscale_arcsec + y0_pix
