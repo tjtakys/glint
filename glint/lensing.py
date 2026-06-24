@@ -7,6 +7,7 @@ Models
 """
 
 from __future__ import annotations
+from dataclasses import dataclass
 import numpy as np
 
 # optional JIT  並列化するとおかしくなるのでとりあえず使わずに進める
@@ -15,6 +16,40 @@ try:
     _HAS_NUMBA = True
 except Exception:
     _HAS_NUMBA = False
+
+
+@dataclass(frozen=True, slots=True)
+class DelaunaySourceMesh:
+    """
+    Adaptive source-plane mesh built from ray-traced image-plane samples.
+
+    Attributes
+    ----------
+    source_points : ndarray, shape (N, 2)
+        Ray-traced source-plane points [arcsec], columns = [beta_x, beta_y].
+    source_simplices : ndarray, shape (Ntri_src, 3)
+        Delaunay triangles in the source plane, indexing source_points.
+    image_points : ndarray, shape (N, 2)
+        Image-plane sample points [arcsec], columns = [theta_x, theta_y].
+    image_simplices : ndarray, shape (Ntri_img, 3)
+        Final adaptive image-plane triangles used for sampling.
+    detA : ndarray, shape (N,)
+        det(d beta / d theta) evaluated at image_points.
+    refined_counts : tuple of int
+        Number of triangles refined at each refinement iteration.
+    """
+
+    source_points: np.ndarray
+    source_simplices: np.ndarray
+    image_points: np.ndarray
+    image_simplices: np.ndarray
+    detA: np.ndarray
+    refined_counts: tuple[int, ...]
+
+    @property
+    def parity(self) -> np.ndarray:
+        """Parity sign at each ray-traced point."""
+        return np.sign(self.detA)
 
 
 # -------------------------- Utilities -------------------------- #
@@ -362,7 +397,7 @@ def map_source_to_image_cube(
     """
 
     nch, ny_src, nx_src = source_cube.shape
-    ny_img, nx_img = beta_x_arcsec.shape
+    # ny_img, nx_img = beta_x_arcsec.shape 各image-plane pixelが対応するsource-plane座標なので_imgで正しい
 
     # Source center pixel indices
     x0_src_pix = (nx_src - 1) / 2.0
@@ -372,7 +407,7 @@ def map_source_to_image_cube(
     beta_x_pix = (beta_x_arcsec - x0_src_arcsec) / src_pixscale_arcsec + x0_src_pix
     beta_y_pix = (beta_y_arcsec - y0_src_arcsec) / src_pixscale_arcsec + y0_src_pix
 
-
+    """ 効率悪いので置き換え
     # Interpolate source image at these coordinates
     z_coords = np.arange(nch)[:, None, None]  # (nch, 1, 1)
     z_coords = np.broadcast_to(z_coords,   shape=(nch, ny_img, nx_img))  # (nch, ny_img, nx_img)
@@ -386,6 +421,24 @@ def map_source_to_image_cube(
     image_plane_flat = map_coordinates(source_cube, coords, order=order, mode='constant', cval=0.0, prefilter=(order > 1))
 
     return image_plane_flat
+    """
+
+    # 全channelで共通のXY座標
+    coords = np.stack([beta_y_pix, beta_x_pix])
+
+    image_cube = np.empty_like(source_cube)
+
+    for channel in range(nch):
+        image_cube[channel] = map_coordinates(
+            source_cube[channel],
+            coords,
+            order=order,
+            mode="constant",
+            cval=0.0,
+            prefilter=(order > 1),
+        )
+
+    return image_cube
 
 # -------------------------- Calculate critical line and caustics -------------------------- #
 """
