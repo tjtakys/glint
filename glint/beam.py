@@ -13,7 +13,7 @@ def cleanbeam_from_header(npix, header):
     """
     正方形 (npix, npix) の復元ビームPSFを生成。npixは奇数とする。
     - BMAJ, BMIN : FWHM [deg]
-    - BPA        : [deg], 北方向が0度、東方向が90度
+    - BPA        : [deg], 北方向が0度、西方向が0度
 
     戻り値: (npix, npix) の正規化PSF
     """
@@ -31,7 +31,7 @@ def cleanbeam_from_header(npix, header):
     sx_pix = FWHM_x_pix / (2.0*np.sqrt(2*np.log(2)))
     sy_pix = FWHM_y_pix / (2.0*np.sqrt(2*np.log(2)))
 
-    # FITS BPA(北基準) → NumPy rotation(東基準)
+    # FITS BPA(北方向=0度) → NumPy rotation(西方向=0度)
     theta = np.deg2rad(90.0 + BPA)
     c, s = np.cos(theta), np.sin(theta)
 
@@ -40,9 +40,9 @@ def cleanbeam_from_header(npix, header):
     x = xx - cx
     y = yy - cy
 
-    # 回転（major軸が x'）
-    xp =  c*x - s*y
-    yp =  s*x + c*y
+    # 受動回転（major軸が x'）
+    xp =  c*x + s*y
+    yp =  -s*x + c*y
 
     k = np.exp(-0.5*((xp/sx_pix)**2 + (yp/sy_pix)**2))
     return _normalize_kernel(k)
