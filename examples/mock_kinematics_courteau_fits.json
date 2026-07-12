@@ -1,0 +1,267 @@
+{
+  "metadata": {
+    "description": "Disk-plus-bulge curves with the same modest NFW halo fitted by the glint Courteau model.",
+    "source_redshift": 6.024,
+    "cosmology": {
+      "H0_km_s_Mpc": 70.0,
+      "Omega_m": 0.3
+    },
+    "kpc_per_arcsec": 5.69917859698162,
+    "fit_radius_arcsec": [
+      0.02,
+      0.8
+    ],
+    "fit_radius_samples": 600,
+    "fit_weighting": "equal weight in velocity for uniformly spaced radius samples",
+    "dark_matter_included": true,
+    "courteau_formula": "V=vc*(1+r/rturn)^beta*(1+(r/rturn)^gamma)^(-1/gamma)*(r/rturn)^(1-beta)",
+    "courteau_fit_bounds": {
+      "v_c_kms": [
+        20.0,
+        800.0
+      ],
+      "r_turn_arcsec": [
+        0.001,
+        2.0
+      ],
+      "beta": [
+        -3.0,
+        0.999
+      ],
+      "gamma": [
+        0.1,
+        20.0
+      ]
+    },
+    "current_inference_bounds": {
+      "v_c_kms": [
+        200.0,
+        500.0
+      ],
+      "r_turn_arcsec": [
+        0.005,
+        0.5
+      ],
+      "beta": [
+        0.5,
+        1.0
+      ],
+      "gamma": [
+        1.0,
+        4.5
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "bt10_re03_dm",
+      "bulge_to_total": 0.1,
+      "bulge_effective_radius_kpc": 0.3,
+      "bulge_mass_msun": 10000000000.0,
+      "disk_mass_msun": 90000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 274.9749791950164,
+        "r_turn_arcsec": 0.3585768793740896,
+        "beta": 0.9785545968995147,
+        "gamma": 3.2075324695112095
+      },
+      "fit_quality": {
+        "rmse_kms": 1.5632505131117607,
+        "max_abs_residual_kms": 6.505657223923038,
+        "fractional_rmse": 0.0035897032514339822,
+        "peak_radius_arcsec": 0.37939899833055096,
+        "peak_radius_kpc": 2.1622626510017415,
+        "peak_velocity_kms": 435.48182220557857,
+        "outer_velocity_kms": 381.8614960581868,
+        "outer_to_peak_ratio": 0.8768712643944088,
+        "outer_drop_kms": 53.62032614739178,
+        "optimizer_cost": 733.1256500232549,
+        "optimizer_nfev": 29
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    },
+    {
+      "name": "bt10_re06_dm",
+      "bulge_to_total": 0.1,
+      "bulge_effective_radius_kpc": 0.6,
+      "bulge_mass_msun": 10000000000.0,
+      "disk_mass_msun": 90000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 303.39670879992235,
+        "r_turn_arcsec": 0.3034587229277484,
+        "beta": 0.8205213755426323,
+        "gamma": 3.148016536738878
+      },
+      "fit_quality": {
+        "rmse_kms": 3.566035366890175,
+        "max_abs_residual_kms": 15.314305978295891,
+        "fractional_rmse": 0.008235915183447387,
+        "peak_radius_arcsec": 0.387212020033389,
+        "peak_radius_kpc": 2.2067904570683092,
+        "peak_velocity_kms": 432.98592657404043,
+        "outer_velocity_kms": 381.0963646498975,
+        "outer_to_peak_ratio": 0.8801587794441401,
+        "outer_drop_kms": 51.889561924142924,
+        "optimizer_cost": 3814.982471373463,
+        "optimizer_nfev": 20
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    },
+    {
+      "name": "bt25_re03_dm",
+      "bulge_to_total": 0.25,
+      "bulge_effective_radius_kpc": 0.3,
+      "bulge_mass_msun": 25000000000.0,
+      "disk_mass_msun": 75000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 348.553684902808,
+        "r_turn_arcsec": 0.1832652819958005,
+        "beta": 0.9989999999999999,
+        "gamma": 1.4829525986632321
+      },
+      "fit_quality": {
+        "rmse_kms": 11.453712840687118,
+        "max_abs_residual_kms": 31.945952760278033,
+        "fractional_rmse": 0.026113539130294162,
+        "peak_radius_arcsec": 0.3155926544240401,
+        "peak_radius_kpc": 1.7986189014581062,
+        "peak_velocity_kms": 438.61204655326605,
+        "outer_velocity_kms": 376.82828577881946,
+        "outer_to_peak_ratio": 0.8591380212651241,
+        "outer_drop_kms": 61.78376077444659,
+        "optimizer_cost": 39356.26135107629,
+        "optimizer_nfev": 25
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    },
+    {
+      "name": "bt25_re06_dm",
+      "bulge_to_total": 0.25,
+      "bulge_effective_radius_kpc": 0.6,
+      "bulge_mass_msun": 25000000000.0,
+      "disk_mass_msun": 75000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 286.24977324642595,
+        "r_turn_arcsec": 0.3096449993584246,
+        "beta": 0.9828581099438809,
+        "gamma": 2.5554883512357853
+      },
+      "fit_quality": {
+        "rmse_kms": 4.014898148890972,
+        "max_abs_residual_kms": 27.851301811658857,
+        "fractional_rmse": 0.009322070168964865,
+        "peak_radius_arcsec": 0.34684474123539233,
+        "peak_radius_kpc": 1.9767301257243763,
+        "peak_velocity_kms": 430.68739841257724,
+        "outer_velocity_kms": 374.8868488049845,
+        "outer_to_peak_ratio": 0.870438397284755,
+        "outer_drop_kms": 55.80054960759276,
+        "optimizer_cost": 4835.822143790446,
+        "optimizer_nfev": 28
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    },
+    {
+      "name": "bt50_re03_dm",
+      "bulge_to_total": 0.5,
+      "bulge_effective_radius_kpc": 0.3,
+      "bulge_mass_msun": 50000000000.0,
+      "disk_mass_msun": 50000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 376.2215484759408,
+        "r_turn_arcsec": 0.048937714316675776,
+        "beta": 0.9989999999999999,
+        "gamma": 2.558990647755236
+      },
+      "fit_quality": {
+        "rmse_kms": 14.85869622501161,
+        "max_abs_residual_kms": 55.48562749810685,
+        "fractional_rmse": 0.025694340831672872,
+        "peak_radius_arcsec": 0.03171953255425709,
+        "peak_radius_kpc": 0.1807752810394838,
+        "peak_velocity_kms": 578.2867255615917,
+        "outer_velocity_kms": 368.28677451366895,
+        "outer_to_peak_ratio": 0.6368584272032435,
+        "outer_drop_kms": 209.9999510479227,
+        "optimizer_cost": 66234.2560521523,
+        "optimizer_nfev": 21
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    },
+    {
+      "name": "bt50_re06_dm",
+      "bulge_to_total": 0.5,
+      "bulge_effective_radius_kpc": 0.6,
+      "bulge_mass_msun": 50000000000.0,
+      "disk_mass_msun": 50000000000.0,
+      "total_baryonic_mass_msun": 100000000000.0,
+      "disk_scale_radius_kpc": 1.0,
+      "bulge_profile": "Hernquist",
+      "has_dark_matter": true,
+      "halo_mass_200_msun": 300000000000.0,
+      "halo_concentration_200": 4.0,
+      "halo_radius_200_kpc": 29.302119315904665,
+      "courteau": {
+        "v_c_kms": 329.51071554968036,
+        "r_turn_arcsec": 0.1452085131300062,
+        "beta": 0.9989999999999999,
+        "gamma": 1.8154625032901963
+      },
+      "fit_quality": {
+        "rmse_kms": 7.333503409617482,
+        "max_abs_residual_kms": 15.600639486793455,
+        "fractional_rmse": 0.016646708139147242,
+        "peak_radius_arcsec": 0.14110183639399,
+        "peak_radius_kpc": 0.80416456597143,
+        "peak_velocity_kms": 440.53775366984684,
+        "outer_velocity_kms": 364.3025297325526,
+        "outer_to_peak_ratio": 0.8269496239488537,
+        "outer_drop_kms": 76.23522393729422,
+        "optimizer_cost": 16134.081677661368,
+        "optimizer_nfev": 20
+      },
+      "current_inference_prior_compatible": true,
+      "current_inference_prior_violations": []
+    }
+  ]
+}
