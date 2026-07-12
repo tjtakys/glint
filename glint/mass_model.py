@@ -20,7 +20,7 @@ from __future__ import annotations
 import numpy as np
 from astropy.constants import G
 import astropy.units as u
-from scipy.special import i0e, i1e, k0e, k1e
+from scipy.special import gammainc, i0e, i1e, k0e, k1e
 
 
 G_KPC_KMS2_MSUN = G.to_value(u.kpc * (u.km / u.s) ** 2 / u.Msun)
@@ -70,6 +70,51 @@ def hernquist_bulge_vcirc2(
         * radius_kpc
         / (radius_kpc + scale_radius_kpc) ** 2
     )
+
+
+def sersic_bulge_vcirc2(
+    radius_kpc,
+    mass_msun: float,
+    effective_radius_kpc: float,
+    sersic_index: float,
+) -> np.ndarray:
+    """Squared circular speed of a spherical Sérsic bulge.
+
+    The projected Sérsic profile is deprojected with the Prugniel--Simien approximation.  Its enclosed mass has the analytic form:
+
+    M(<r) = M_tot P(n(3-p), b_n (r/R_e)^(1/n))  
+
+    where ``P`` is the regularized lower incomplete gamma function.  The
+    approximations for ``b_n`` and ``p`` are intended for ``n > 0.36`` and
+    ``0.6 < n < 10``, respectively.
+    """
+    b_n = 2.0 * sersic_index - 1.0 / 3.0 + 0.009876 / sersic_index # https://articles.adsabs.harvard.edu/pdf/1997A%26A...321..111P
+    p = 1.0 - 0.6097 / sersic_index + 0.05563 / sersic_index**2 # https://articles.adsabs.harvard.edu/pdf/2000A%26A...353..873M
+    gamma_shape = sersic_index * (3.0 - p)
+    gamma_argument = b_n * (radius_kpc / effective_radius_kpc) ** (1.0 / sersic_index)
+    enclosed_mass = mass_msun * gammainc(gamma_shape, gamma_argument)
+    return np.divide(
+        G_KPC_KMS2_MSUN * enclosed_mass,
+        radius_kpc,
+        out=np.zeros_like(radius_kpc),
+        where=radius_kpc > 0.0,
+    )
+
+
+def sersic_bulge_vcirc(
+    radius_kpc,
+    mass_msun: float,
+    effective_radius_kpc: float,
+    sersic_index: float,
+) -> np.ndarray:
+    """Circular speed of a spherical Sérsic bulge [km/s]."""
+    velocity2 = sersic_bulge_vcirc2(
+        radius_kpc,
+        mass_msun=mass_msun,
+        effective_radius_kpc=effective_radius_kpc,
+        sersic_index=sersic_index,
+    )
+    return np.sqrt(np.maximum(velocity2, 0.0))
 
 
 def disk_plus_bulge_vcirc2(
