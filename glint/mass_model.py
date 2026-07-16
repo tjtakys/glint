@@ -24,10 +24,18 @@ from scipy.special import gammainc, i0e, i1e, k0e, k1e
 
 
 G_KPC_KMS2_MSUN = G.to_value(u.kpc * (u.km / u.s) ** 2 / u.Msun)
-HERNQUIST_RE_OVER_A = 1.8153
 
 
-def exponential_disk_vcirc2(
+def r200_kpc_from_m200(
+    mass_200_msun: float,
+    critical_density_msun_kpc3: float,
+) -> float:
+    """Return the radius enclosing 200 times the critical density [kpc].
+    ちなみに、unit使うと計算770倍遅くなったので注意"""
+    return (3.0 * mass_200_msun / (800.0 * np.pi * critical_density_msun_kpc3)) ** (1.0 / 3.0)
+
+
+def vcirc2_exponential_disk(
     radius_kpc,
     mass_msun: float,
     scale_radius_kpc: float,
@@ -36,7 +44,8 @@ def exponential_disk_vcirc2(
 
     This is the Freeman-disk expression
 
-        V_c^2(R) = 2 G M_d R_d^{-1} y^2 [I_0(y)K_0(y)-I_1(y)K_1(y)], (J. Binney & S. Tremaine 2008)
+        V_c^2(R) = 2 G M_d R_d^{-1} y^2
+                   [I_0(y)K_0(y)-I_1(y)K_1(y)]
 
     where ``y = R / (2 R_d)``. The exponentially scaled Bessel functions are
     numerically stable at large ``y`` and faster than generic-order wrappers.
@@ -53,7 +62,7 @@ def exponential_disk_vcirc2(
     return flat_velocity2.reshape(radius_kpc.shape)
 
 
-def hernquist_bulge_vcirc2(
+def vcirc2_hernquist_bulge(
     radius_kpc,
     mass_msun: float,
     effective_radius_kpc: float,
@@ -63,16 +72,11 @@ def hernquist_bulge_vcirc2(
     ``effective_radius_kpc`` is the projected half-light radius.  It is
     converted to the Hernquist scale radius using ``R_e = 1.8153 a``.
     """
-    scale_radius_kpc = effective_radius_kpc / HERNQUIST_RE_OVER_A
-    return (
-        G_KPC_KMS2_MSUN
-        * mass_msun
-        * radius_kpc
-        / (radius_kpc + scale_radius_kpc) ** 2
-    )
+    scale_radius_kpc = effective_radius_kpc / 1.8153
+    return G_KPC_KMS2_MSUN * mass_msun * radius_kpc / (radius_kpc + scale_radius_kpc) ** 2
 
 
-def sersic_bulge_vcirc2(
+def vcirc2_sersic_bulge(
     radius_kpc,
     mass_msun: float,
     effective_radius_kpc: float,
@@ -80,19 +84,22 @@ def sersic_bulge_vcirc2(
 ) -> np.ndarray:
     """Squared circular speed of a spherical Sérsic bulge.
 
-    The projected Sérsic profile is deprojected with the Prugniel--Simien approximation.  Its enclosed mass has the analytic form:
+    The projected Sérsic profile is deprojected with the Prugniel--Simien
+    approximation. Its enclosed mass has the analytic form:
 
-    M(<r) = M_tot P(n(3-p), b_n (r/R_e)^(1/n))  
+        M(<r) = M_tot P(n(3-p), b_n (r/R_e)^(1/n))
 
     where ``P`` is the regularized lower incomplete gamma function.  The
     approximations for ``b_n`` and ``p`` are intended for ``n > 0.36`` and
     ``0.6 < n < 10``, respectively.
     """
-    b_n = 2.0 * sersic_index - 1.0 / 3.0 + 0.009876 / sersic_index # https://articles.adsabs.harvard.edu/pdf/1997A%26A...321..111P
-    p = 1.0 - 0.6097 / sersic_index + 0.05563 / sersic_index**2 # https://articles.adsabs.harvard.edu/pdf/2000A%26A...353..873M
+    # Prugniel & Simien (1997), A&A, 321, 111
+    b_n = 2.0 * sersic_index - 1.0 / 3.0 + 0.009876 / sersic_index
+    # Márquez et al. (2000), A&A, 353, 873
+    p = 1.0 - 0.6097 / sersic_index + 0.05563 / sersic_index**2
     gamma_shape = sersic_index * (3.0 - p)
     gamma_argument = b_n * (radius_kpc / effective_radius_kpc) ** (1.0 / sersic_index)
-    enclosed_mass = mass_msun * gammainc(gamma_shape, gamma_argument)
+    enclosed_mass = mass_msun * gammainc(gamma_shape, gamma_argument) # scipyのgammaincは正規化されている
     return np.divide(
         G_KPC_KMS2_MSUN * enclosed_mass,
         radius_kpc,
@@ -101,23 +108,7 @@ def sersic_bulge_vcirc2(
     )
 
 
-def sersic_bulge_vcirc(
-    radius_kpc,
-    mass_msun: float,
-    effective_radius_kpc: float,
-    sersic_index: float,
-) -> np.ndarray:
-    """Circular speed of a spherical Sérsic bulge [km/s]."""
-    velocity2 = sersic_bulge_vcirc2(
-        radius_kpc,
-        mass_msun=mass_msun,
-        effective_radius_kpc=effective_radius_kpc,
-        sersic_index=sersic_index,
-    )
-    return np.sqrt(np.maximum(velocity2, 0.0))
-
-
-def disk_plus_bulge_vcirc2(
+def vcirc2_disk_bulge(
     radius_kpc,
     disk_mass_msun: float,
     disk_scale_radius_kpc: float,
@@ -125,61 +116,18 @@ def disk_plus_bulge_vcirc2(
     bulge_effective_radius_kpc: float,
 ) -> np.ndarray:
     """Squared circular speed of an exponential disk plus Hernquist bulge."""
-    return exponential_disk_vcirc2(
+    return vcirc2_exponential_disk(
         radius_kpc,
         mass_msun=disk_mass_msun,
         scale_radius_kpc=disk_scale_radius_kpc,
-    ) + hernquist_bulge_vcirc2(
+    ) + vcirc2_hernquist_bulge(
         radius_kpc,
         mass_msun=bulge_mass_msun,
         effective_radius_kpc=bulge_effective_radius_kpc,
     )
 
 
-def disk_plus_bulge_vcirc(
-    radius_kpc,
-    disk_mass_msun: float,
-    disk_scale_radius_kpc: float,
-    bulge_mass_msun: float,
-    bulge_effective_radius_kpc: float,
-) -> np.ndarray:
-    """Circular speed of an exponential disk plus Hernquist bulge [km/s]."""
-    velocity2 = disk_plus_bulge_vcirc2(
-        radius_kpc,
-        disk_mass_msun=disk_mass_msun,
-        disk_scale_radius_kpc=disk_scale_radius_kpc,
-        bulge_mass_msun=bulge_mass_msun,
-        bulge_effective_radius_kpc=bulge_effective_radius_kpc,
-    )
-    return np.sqrt(np.maximum(velocity2, 0.0))
-
-
-def disk_plus_bulge_vcirc_components(
-    radius_kpc,
-    disk_mass_msun: float,
-    disk_scale_radius_kpc: float,
-    bulge_mass_msun: float,
-    bulge_effective_radius_kpc: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return disk, bulge, and total circular speeds [km/s]."""
-    disk_velocity2 = exponential_disk_vcirc2(
-        radius_kpc,
-        mass_msun=disk_mass_msun,
-        scale_radius_kpc=disk_scale_radius_kpc,
-    )
-    bulge_velocity2 = hernquist_bulge_vcirc2(
-        radius_kpc,
-        mass_msun=bulge_mass_msun,
-        effective_radius_kpc=bulge_effective_radius_kpc,
-    )
-    return (
-        np.sqrt(np.maximum(disk_velocity2, 0.0)),
-        np.sqrt(np.maximum(bulge_velocity2, 0.0)),
-        np.sqrt(np.maximum(disk_velocity2 + bulge_velocity2, 0.0)),
-    )
-
-
-def nfw_halo_vcirc2(
+def vcirc2_nfw_halo(
     radius_kpc,
     mass_200_msun: float,
     radius_200_kpc: float,
@@ -195,10 +143,7 @@ def nfw_halo_vcirc2(
     scale_radius_kpc = radius_200_kpc / concentration_200
     x = radius_kpc / scale_radius_kpc
     enclosed_shape = np.log1p(x) - x / (1.0 + x)
-    normalization = (
-        np.log1p(concentration_200)
-        - concentration_200 / (1.0 + concentration_200)
-    )
+    normalization = np.log1p(concentration_200) - concentration_200 / (1.0 + concentration_200)
     enclosed_mass = mass_200_msun * enclosed_shape / normalization
     return np.divide(
         G_KPC_KMS2_MSUN * enclosed_mass,
@@ -208,7 +153,7 @@ def nfw_halo_vcirc2(
     )
 
 
-def disk_bulge_halo_vcirc2(
+def vcirc2_disk_bulge_halo(
     radius_kpc,
     disk_mass_msun: float,
     disk_scale_radius_kpc: float,
@@ -219,41 +164,17 @@ def disk_bulge_halo_vcirc2(
     halo_concentration_200: float,
 ) -> np.ndarray:
     """Squared circular speed of disk, bulge, and NFW halo components."""
-    baryon_velocity2 = disk_plus_bulge_vcirc2(
+    baryon_velocity2 = vcirc2_disk_bulge(
         radius_kpc,
         disk_mass_msun=disk_mass_msun,
         disk_scale_radius_kpc=disk_scale_radius_kpc,
         bulge_mass_msun=bulge_mass_msun,
         bulge_effective_radius_kpc=bulge_effective_radius_kpc,
     )
-    halo_velocity2 = nfw_halo_vcirc2(
+    halo_velocity2 = vcirc2_nfw_halo(
         radius_kpc,
         mass_200_msun=halo_mass_200_msun,
         radius_200_kpc=halo_radius_200_kpc,
         concentration_200=halo_concentration_200,
     )
     return baryon_velocity2 + halo_velocity2
-
-
-def disk_bulge_halo_vcirc(
-    radius_kpc,
-    disk_mass_msun: float,
-    disk_scale_radius_kpc: float,
-    bulge_mass_msun: float,
-    bulge_effective_radius_kpc: float,
-    halo_mass_200_msun: float,
-    halo_radius_200_kpc: float,
-    halo_concentration_200: float,
-) -> np.ndarray:
-    """Circular speed of disk, bulge, and NFW halo components [km/s]."""
-    velocity2 = disk_bulge_halo_vcirc2(
-        radius_kpc,
-        disk_mass_msun=disk_mass_msun,
-        disk_scale_radius_kpc=disk_scale_radius_kpc,
-        bulge_mass_msun=bulge_mass_msun,
-        bulge_effective_radius_kpc=bulge_effective_radius_kpc,
-        halo_mass_200_msun=halo_mass_200_msun,
-        halo_radius_200_kpc=halo_radius_200_kpc,
-        halo_concentration_200=halo_concentration_200,
-    )
-    return np.sqrt(np.maximum(velocity2, 0.0))
