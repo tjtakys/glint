@@ -1,0 +1,86 @@
+[target]
+redshift = 6.024
+
+[mass_model]
+total_baryonic_mass_msun = 1.0e11
+disk_scale_radius_kpc = 1.0
+bulge_to_total_values = [0.10, 0.25, 0.50]
+bulge_effective_radii_kpc = [0.30, 0.60]
+include_no_bulge_case = true
+no_bulge_placeholder_radius_kpc = 0.30
+halo_mass_200_msun = 3.0e11
+halo_concentration_200 = 3.0
+
+[source]
+inclination_deg = 45.0
+position_angle_deg = 35.0
+systemic_velocity_kms = 0.0
+surface_brightness_scale_arcsec = 0.22
+velocity_dispersion_kms = 30.0
+
+[cube]
+pixel_size_arcsec = 0.025
+grid_size = 65
+radius_max_arcsec = 0.80
+radial_samples = 500
+velocity_min_kms = -650.0
+velocity_max_kms = 650.0
+channel_width_kms = 50.0
+spectral_resolution_sigma_kms = 0.0
+
+[psf]
+fwhm_major_arcsec = 0.15
+fwhm_minor_arcsec = 0.12
+position_angle_deg = 30.0
+truncate_sigma = 4.0
+
+[noise]
+peak_signal_to_noise = 10.0
+random_seed = 20260717
+
+[parallel]
+# Independent case/model fits are distributed across processes. The actual
+# worker count is min(max_workers, number of requested fits, available CPUs).
+max_workers = 32
+start_method = "fork"
+
+[fit]
+free_parameters_bulge = [
+    "log10_m_baryon",
+    "bulge_to_total",
+    "disk_scale_radius_kpc",
+    "bulge_effective_radius_kpc",
+    "log10_m200",
+]
+free_parameters_no_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+]
+
+[fit.bounds.log10_m_baryon]
+lower = 10.3
+upper = 11.7
+
+[fit.bounds.bulge_to_total]
+lower = 0.0
+upper = 0.75
+
+[fit.bounds.disk_scale_radius_kpc]
+lower = 0.40
+upper = 2.00
+
+[fit.bounds.bulge_effective_radius_kpc]
+lower = 0.10
+upper = 1.00
+
+[fit.bounds.log10_m200]
+lower = 10.5
+upper = 12.5
+
+[dynesty]
+nlive = 150
+dlogz = 0.30
+bound = "multi"
+sample = "rwalk"
+random_seed = 314159
