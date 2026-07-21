@@ -138,6 +138,164 @@ def load_processed_uv(path: str | PathLike[str]) -> ProcessedUVData:
         phase_center_deg=phase_center_deg,
     )
 
+
+def get_msdata(
+    path: str | PathLike[str],
+    *,
+    data_column: str = "DATA",
+    spw_id: int = 0,
+) -> dict[str, np.ndarray]:
+    """Read one spectral window from a CASA Measurement Set without processing it."""
+    try:
+        from casatools import table
+    except ImportError as exc:
+        raise ImportError("casatools is required to load a Measurement Set.") from exc
+
+    ms_path = str(path)
+    tb = table()
+    try:
+        tb.open(ms_path + "/DATA_DESCRIPTION")
+        spw_by_data_desc = np.asarray(tb.getcol("SPECTRAL_WINDOW_ID"), dtype=int)
+    finally:
+        tb.close()
+    matching_data_desc = np.flatnonzero(spw_by_data_desc == spw_id)
+    if matching_data_desc.size == 0:
+        raise ValueError(f"Spectral window {spw_id} is not present in the Measurement Set.")
+
+    selected = None
+    try:
+        tb.open(ms_path)
+        data_desc_id = np.asarray(tb.getcol("DATA_DESC_ID"), dtype=int)
+        rows = np.flatnonzero(np.isin(data_desc_id, matching_data_desc))
+        if rows.size == 0:
+            raise ValueError(f"Spectral window {spw_id} has no rows in the Measurement Set.")
+        selected = tb.selectrows(rows.tolist())
+        uvw_m = np.asarray(selected.getcol("UVW"), dtype=float)
+        data_pol = np.asarray(selected.getcol(data_column.upper()))
+        weight_pol = np.asarray(selected.getcol("WEIGHT"), dtype=float)
+        sigma_pol = np.asarray(selected.getcol("SIGMA"), dtype=float)
+        flag_pol = np.asarray(selected.getcol("FLAG"), dtype=bool)
+        antenna1 = np.asarray(selected.getcol("ANTENNA1"), dtype=int)
+        antenna2 = np.asarray(selected.getcol("ANTENNA2"), dtype=int)
+        time_s = np.asarray(selected.getcol("TIME"), dtype=float)
+        scan_number = np.asarray(selected.getcol("SCAN_NUMBER"), dtype=int)
+        field_id = np.asarray(selected.getcol("FIELD_ID"), dtype=int)
+    finally:
+        if selected is not None:
+            selected.close()
+        tb.close()
+
+    unique_field_id = np.unique(field_id)
+    if unique_field_id.size != 1:
+        raise ValueError(
+            "Selected Measurement Set rows must belong to exactly one field; "
+            f"got field IDs {unique_field_id.tolist()}."
+        )
+
+    try:
+        tb.open(ms_path + "/SPECTRAL_WINDOW")
+        freqs_hz = np.atleast_1d(
+            np.asarray(tb.getcell("CHAN_FREQ", int(spw_id)), dtype=float)
+        )
+    finally:
+        tb.close()
+    try:
+        tb.open(ms_path + "/FIELD")
+        phase_center_rad = np.asarray(
+            tb.getcell("PHASE_DIR", int(unique_field_id[0])), dtype=float
+        ).squeeze()
+    finally:
+        tb.close()
+    if phase_center_rad.shape != (2,):
+        raise ValueError(f"PHASE_DIR must contain two coordinates; got {phase_center_rad.shape}.")
+
+    return {
+        "uvw_m": uvw_m,
+        "data_pol": data_pol,
+        "weight_pol": weight_pol,
+        "sigma_pol": sigma_pol,
+        "flag_pol": flag_pol,
+        "freqs_hz": freqs_hz,
+        "phase_center_rad": phase_center_rad,
+        "antenna1": antenna1,
+        "antenna2": antenna2,
+        "time_s": time_s,
+        "scan_number": scan_number,
+        "field_id": field_id,
+    }
+
+
+def process_msdata(
+    msdata: dict[str, np.ndarray],
+    *,
+    dish_diameter_m: float = 12.0,
+) -> dict[str, np.ndarray]:
+    """Flag, polarization-average, and derive coordinates from raw MS data."""
+    if dish_diameter_m <= 0:
+        raise ValueError("dish_diameter_m must be > 0.")
+
+    uvw_m = np.asarray(msdata["uvw_m"], dtype=float)
+    data_pol = np.asarray(msdata["data_pol"])
+    weight_pol = np.asarray(msdata["weight_pol"], dtype=float)
+    flag_pol = np.asarray(msdata["flag_pol"], dtype=bool)
+    freqs_hz = np.atleast_1d(np.asarray(msdata["freqs_hz"], dtype=float))
+    phase_center_rad = np.asarray(msdata["phase_center_rad"], dtype=float)
+
+    if data_pol.ndim == 2:
+        data_pol = data_pol[:, None, :]
+    if flag_pol.ndim == 2:
+        flag_pol = flag_pol[:, None, :]
+    if data_pol.ndim != 3 or flag_pol.shape != data_pol.shape:
+        raise ValueError(
+            "DATA and FLAG must have shape (npol, nchan, nrow); "
+            f"got {data_pol.shape} and {flag_pol.shape}."
+        )
+    npol, nchan, nrow = data_pol.shape
+    if uvw_m.shape != (3, nrow):
+        raise ValueError(f"UVW must have shape (3, {nrow}); got {uvw_m.shape}.")
+    if weight_pol.shape == (npol, nrow):
+        weight_pol = np.broadcast_to(weight_pol[:, None, :], data_pol.shape)
+    elif weight_pol.shape != data_pol.shape:
+        raise ValueError(
+            "WEIGHT must have shape (npol, nrow) or match DATA; "
+            f"got {weight_pol.shape}."
+        )
+    if freqs_hz.shape != (nchan,):
+        raise ValueError(
+            f"CHAN_FREQ has shape {freqs_hz.shape}, but DATA has {nchan} channels."
+        )
+    if phase_center_rad.shape != (2,):
+        raise ValueError(f"PHASE_DIR must contain two coordinates; got {phase_center_rad.shape}.")
+
+    effective_weight = np.where(flag_pol, 0.0, weight_pol)
+    weight = np.sum(effective_weight, axis=0)
+    numerator = np.sum(effective_weight * data_pol, axis=0)
+    data = np.divide(
+        numerator,
+        weight,
+        out=np.zeros((nchan, nrow), dtype=data_pol.dtype),
+        where=weight > 0,
+    )
+    flag = weight <= 0
+    sigma = np.full((nchan, nrow), np.inf, dtype=float)
+    sigma[~flag] = 1.0 / np.sqrt(weight[~flag])
+
+    wavelength_m = cspeed.value / freqs_hz
+    uvw_lam = uvw_m[:, None, :] / wavelength_m[None, :, None]
+    pb_fwhm_as = 1.13 * wavelength_m / dish_diameter_m / ARCSEC2RAD
+
+    return {
+        "uvw_m": uvw_m,
+        "uvw_lam": uvw_lam,
+        "data": data,
+        "sigma": sigma,
+        "weight": weight,
+        "flag": flag,
+        "freqs_hz": freqs_hz,
+        "pb_fwhm_as": pb_fwhm_as,
+        "phase_center_deg": np.rad2deg(phase_center_rad),
+    }
+
 # def primary_beam(xx_as, yy_as, pb_fwhm_as):
 #     r_as = np.hypot(xx_as, yy_as)
 #     PB = np.exp(-4.0*np.log(2.0) * (r_as**2) / (pb_fwhm_as**2)) # ALMA technical handbook Fig 7.14
