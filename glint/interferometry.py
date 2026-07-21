@@ -1,8 +1,142 @@
+from dataclasses import dataclass
+from os import PathLike
+
 import numpy as np
+from astropy.constants import c as cspeed
 # import numba as nb
 from finufft import nufft2d2, nufft2d3
 
 ARCSEC2RAD = np.deg2rad(1/3600)
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessedUVData:
+    """Validated visibility data loaded from a processed UV ``.npz`` file.
+
+    Array shapes follow the convention used by the GLINT notebooks:
+    ``uvw_m`` is ``(3, nrow)``, ``uvw_lam`` is ``(3, nchan, nrow)``, and
+    ``data``, ``sigma``, and ``flag`` are ``(nchan, nrow)``.
+    """
+
+    uvw_m: np.ndarray
+    uvw_lam: np.ndarray
+    data: np.ndarray
+    sigma: np.ndarray
+    flag: np.ndarray
+    freqs_hz: np.ndarray
+    v_kms: np.ndarray
+    pb_fwhm_as: np.ndarray
+    phase_center_deg: np.ndarray
+
+    @property
+    def nchan(self) -> int:
+        return int(self.data.shape[0])
+
+    @property
+    def sigma_inv(self) -> np.ndarray:
+        result = np.zeros_like(self.sigma, dtype=float)
+        return np.divide(1.0, self.sigma, out=result, where=self.sigma > 0)
+
+    @property
+    def spec_res_sigma_kms(self) -> float:
+        if self.nchan < 2:
+            raise ValueError("At least two velocity channels are required to infer spectral resolution.")
+        return float(abs(np.median(np.diff(self.v_kms))) / 2.355)
+
+    def minimum_baseline_m(
+        self,
+        max_angular_scale_arcsec: float,
+        *,
+        scale_factor: float = 0.6,
+    ) -> np.ndarray:
+        """Return the per-channel minimum baseline for a maximum angular scale."""
+        if max_angular_scale_arcsec <= 0:
+            raise ValueError("max_angular_scale_arcsec must be > 0.")
+        if scale_factor <= 0:
+            raise ValueError("scale_factor must be > 0.")
+        theta_rad = max_angular_scale_arcsec * ARCSEC2RAD
+        wavelength_m = cspeed.value / self.freqs_hz
+        return scale_factor * wavelength_m / theta_rad
+
+    def flags_with_max_angular_scale_cut(
+        self,
+        max_angular_scale_arcsec: float,
+        *,
+        scale_factor: float = 0.6,
+    ) -> np.ndarray:
+        """Add flags for baselines sensitive to scales larger than the limit."""
+        minimum_baseline_m = self.minimum_baseline_m(
+            max_angular_scale_arcsec,
+            scale_factor=scale_factor,
+        )
+        uv_radius_m = np.hypot(self.uvw_m[0], self.uvw_m[1])
+        return self.flag | (uv_radius_m[None, :] < minimum_baseline_m[:, None])
+
+
+def load_processed_uv(path: str | PathLike[str]) -> ProcessedUVData:
+    """Load and validate a processed UV archive produced by the GLINT workflow."""
+    required = {
+        "uvw",
+        "uvw_lam",
+        "data",
+        "sigma",
+        "flag",
+        "freqs",
+        "v_kms",
+        "pb_fwhm",
+        "phase_dir",
+    }
+    with np.load(path, allow_pickle=False) as uvpack:
+        missing = required.difference(uvpack.files)
+        if missing:
+            names = ", ".join(sorted(missing))
+            raise KeyError(f"Processed UV archive is missing required fields: {names}")
+        uvw_m = np.asarray(uvpack["uvw"], dtype=float)
+        uvw_lam = np.asarray(uvpack["uvw_lam"], dtype=float)
+        data = np.asarray(uvpack["data"])
+        sigma = np.asarray(uvpack["sigma"], dtype=float)
+        flag = np.asarray(uvpack["flag"], dtype=bool)
+        freqs_hz = np.atleast_1d(np.asarray(uvpack["freqs"], dtype=float))
+        v_kms = np.atleast_1d(np.asarray(uvpack["v_kms"], dtype=float))
+        pb_fwhm_as = np.asarray(uvpack["pb_fwhm"], dtype=float)
+        phase_center_deg = np.asarray(uvpack["phase_dir"], dtype=float)
+
+    if data.ndim != 2:
+        raise ValueError(f"data must have shape (nchan, nrow); got {data.shape}.")
+    nchan, nrow = data.shape
+    if uvw_m.shape != (3, nrow):
+        raise ValueError(f"uvw must have shape (3, {nrow}); got {uvw_m.shape}.")
+    if uvw_lam.shape != (3, nchan, nrow):
+        raise ValueError(
+            f"uvw_lam must have shape (3, {nchan}, {nrow}); got {uvw_lam.shape}."
+        )
+    for name, array in (("sigma", sigma), ("flag", flag)):
+        if array.shape != data.shape:
+            raise ValueError(f"{name} must have shape {data.shape}; got {array.shape}.")
+    if freqs_hz.shape != (nchan,):
+        raise ValueError(f"freqs must have shape ({nchan},); got {freqs_hz.shape}.")
+    if v_kms.shape != (nchan,):
+        raise ValueError(f"v_kms must have shape ({nchan},); got {v_kms.shape}.")
+    if pb_fwhm_as.ndim > 1 or (pb_fwhm_as.ndim == 1 and pb_fwhm_as.shape != (nchan,)):
+        raise ValueError("pb_fwhm must be scalar or have shape (nchan,).")
+    if phase_center_deg.shape != (2,):
+        raise ValueError(f"phase_dir must have shape (2,); got {phase_center_deg.shape}.")
+    if np.any(freqs_hz <= 0):
+        raise ValueError("All frequencies must be > 0 Hz.")
+    if np.any((sigma <= 0) & ~flag):
+        raise ValueError("Unflagged visibility sigma values must be > 0.")
+
+    return ProcessedUVData(
+        uvw_m=uvw_m,
+        uvw_lam=uvw_lam,
+        data=data,
+        sigma=sigma,
+        flag=flag,
+        freqs_hz=freqs_hz,
+        v_kms=v_kms,
+        pb_fwhm_as=pb_fwhm_as,
+        phase_center_deg=phase_center_deg,
+    )
 
 # def primary_beam(xx_as, yy_as, pb_fwhm_as):
 #     r_as = np.hypot(xx_as, yy_as)
