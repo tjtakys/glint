@@ -18,15 +18,15 @@ class ProcessedUVData:
     ``data``, ``sigma``, and ``flag`` are ``(nchan, nrow)``.
     """
 
-    uvw_m: np.ndarray
-    uvw_lam: np.ndarray
-    data: np.ndarray
-    sigma: np.ndarray
-    flag: np.ndarray
-    freqs_hz: np.ndarray
-    v_kms: np.ndarray
-    pb_fwhm_as: np.ndarray
-    phase_center_deg: np.ndarray
+    uvw_m: np.ndarray            # (3, nrow): (u, v, w) in meters
+    uvw_lam: np.ndarray          # (3, nchan, nrow): (u, v, w) in wavelengths
+    data: np.ndarray             # (nchan, nrow): complex visibilities
+    sigma: np.ndarray            # (nchan, nrow): visibility uncertainties
+    flag: np.ndarray             # (nchan, nrow): True for flagged visibilities
+    freqs_hz: np.ndarray         # (nchan,): channel frequencies in Hz
+    v_kms: np.ndarray            # (nchan,): channel velocities in km/s
+    pb_fwhm_as: np.ndarray       # () or (nchan,): primary-beam FWHM in arcsec
+    phase_center_deg: np.ndarray # (2,): (RA, Dec) phase center in degrees
 
     @property
     def nchan(self) -> int:
@@ -35,7 +35,7 @@ class ProcessedUVData:
     @property
     def sigma_inv(self) -> np.ndarray:
         result = np.zeros_like(self.sigma, dtype=float)
-        return np.divide(1.0, self.sigma, out=result, where=self.sigma > 0)
+        return np.divide(1.0, self.sigma, out=result, where=self.sigma > 0) # もしsigma<=0だと重み0
 
     @property
     def spec_res_sigma_kms(self) -> float:
@@ -47,9 +47,9 @@ class ProcessedUVData:
         self,
         max_angular_scale_arcsec: float,
         *,
-        scale_factor: float = 0.6,
+        scale_factor: float = 0.6, # 経験的な値：https://almascience.nrao.edu/about-alma/alma-basics
     ) -> np.ndarray:
-        """Return the per-channel minimum baseline for a maximum angular scale."""
+        """天体より明らかに大きいスケールの構造に対応するbaselineをフラグするための最小baseline [m] を返す。"""
         if max_angular_scale_arcsec <= 0:
             raise ValueError("max_angular_scale_arcsec must be > 0.")
         if scale_factor <= 0:
@@ -64,7 +64,7 @@ class ProcessedUVData:
         *,
         scale_factor: float = 0.6,
     ) -> np.ndarray:
-        """Add flags for baselines sensitive to scales larger than the limit."""
+        """天体より明らかに大きいスケールの構造に対応するbaselineをフラグする。"""
         minimum_baseline_m = self.minimum_baseline_m(
             max_angular_scale_arcsec,
             scale_factor=scale_factor,
@@ -145,7 +145,13 @@ def get_msdata(
     data_column: str = "DATA",
     spw_id: int = 0,
 ) -> dict[str, np.ndarray]:
-    """Read one spectral window from a CASA Measurement Set without processing it."""
+    """Read one spectral window from a CASA Measurement Set without processing it.
+
+    Returns arrays with shapes ``uvw_m=(3, nrow)``,
+    ``data_pol=flag_pol=(npol, nchan, nrow)``,
+    ``weight_pol=sigma_pol=(npol, nrow)``, ``freqs_hz=(nchan,)``,
+    ``phase_center_rad=(2,)``, and all row metadata arrays ``(nrow,)``.
+    """
     try:
         from casatools import table
     except ImportError as exc:
@@ -230,7 +236,12 @@ def process_msdata(
     *,
     dish_diameter_m: float = 12.0,
 ) -> dict[str, np.ndarray]:
-    """Flag, polarization-average, and derive coordinates from raw MS data."""
+    """Flag, polarization-average, and derive coordinates from raw MS data.
+
+    Returns ``uvw_m=(3, nrow)``, ``uvw_lam=(3, nchan, nrow)``,
+    ``data=sigma=weight=flag=(nchan, nrow)``,
+    ``freqs_hz=pb_fwhm_as=(nchan,)``, and ``phase_center_deg=(2,)``.
+    """
     if dish_diameter_m <= 0:
         raise ValueError("dish_diameter_m must be > 0.")
 
