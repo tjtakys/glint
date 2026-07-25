@@ -141,6 +141,72 @@ def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa)
     alpha_x = alpha_x_sie + alpha_x_es
     alpha_y = alpha_y_sie + alpha_y_es
     return alpha_x, alpha_y
+
+
+def deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
+    """Analytic derivatives of the SIE deflection field."""
+    x_shift = xx - x0
+    y_shift = yy - y0
+    cos_pa = np.cos(pa)
+    sin_pa = np.sin(pa)
+    x_rot, y_rot = _rot(x_shift, y_shift, cos_pa, sin_pa)
+
+    q = np.clip(q, 1e-5, 1.0 - 1e-5)
+    eps = np.sqrt(1.0 - q**2)
+    psi = np.sqrt(q**2 * (x_rot**2 + s**2) + y_rot**2)
+    singular = psi <= 1e-15
+    psi_safe = np.where(singular, 1.0, psi)
+    dpsi_dx = q**2 * x_rot / psi_safe
+    dpsi_dy = y_rot / psi_safe
+
+    denominator_x = psi_safe + s
+    denominator_y = psi_safe + q**2 * s
+    tx = eps * x_rot / denominator_x
+    ty = eps * y_rot / denominator_y
+    scale = b * np.sqrt(q) / eps
+
+    dtx_dx = eps * (denominator_x - x_rot * dpsi_dx) / denominator_x**2
+    dtx_dy = -eps * x_rot * dpsi_dy / denominator_x**2
+    dty_dx = -eps * y_rot * dpsi_dx / denominator_y**2
+    dty_dy = eps * (denominator_y - y_rot * dpsi_dy) / denominator_y**2
+
+    dax_dx_rot = scale * dtx_dx / (1.0 + tx**2)
+    dax_dy_rot = scale * dtx_dy / (1.0 + tx**2)
+    day_dx_rot = scale * dty_dx / (1.0 - ty**2)
+    day_dy_rot = scale * dty_dy / (1.0 - ty**2)
+
+    c = cos_pa
+    sn = sin_pa
+    dax_dx = c**2 * dax_dx_rot - c * sn * (dax_dy_rot + day_dx_rot) + sn**2 * day_dy_rot
+    dax_dy = c * sn * dax_dx_rot + c**2 * dax_dy_rot - sn**2 * day_dx_rot - c * sn * day_dy_rot
+    day_dx = c * sn * dax_dx_rot - sn**2 * dax_dy_rot + c**2 * day_dx_rot - c * sn * day_dy_rot
+    day_dy = sn**2 * dax_dx_rot + c * sn * (dax_dy_rot + day_dx_rot) + c**2 * day_dy_rot
+
+    return tuple(np.where(singular, np.nan, derivative) for derivative in (
+        dax_dx, dax_dy, day_dx, day_dy,
+    ))
+
+
+def deflection_jacobian_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
+    """Analytic derivatives of the external-shear deflection field."""
+    gamma = 10**log_gamma
+    gamma1 = gamma * np.cos(2.0 * pa_gamma)
+    gamma2 = gamma * np.sin(2.0 * pa_gamma)
+    shape = np.broadcast_shapes(np.shape(xx), np.shape(yy))
+    return (
+        np.full(shape, kappa + gamma1),
+        np.full(shape, gamma2),
+        np.full(shape, gamma2),
+        np.full(shape, kappa - gamma1),
+    )
+
+
+def deflection_jacobian_SIE_plus_ES(
+        xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa):
+    """Analytic derivatives of the combined SIE and external-shear deflection."""
+    sie = deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa)
+    shear = deflection_jacobian_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa)
+    return tuple(sie_term + shear_term for sie_term, shear_term in zip(sie, shear))
     
 
 # -------------------------- Mapping source to image -------------------------- #
@@ -425,6 +491,9 @@ def map_source_to_image_cube(
 # -------------------------- Calculate critical line and caustics -------------------------- #
 """
 det A(theta) = 0 となる theta がcritical lines、causticsはそれをsource planeに戻せばいい。
+A = d beta / d theta = I - d alpha / d theta だから、deflectorの微分 np.gradient() を計算すればdet Aを求められる。
+しかし、この場合、特異点付近ではdet Aが急激に変化するので、gridの解像度が低いとdet A=0のcontourが正しく求められず、おかしなlineが出現する。
+今回はSIEを想定しているので、analyticなdeflectorの微分を直接使う。将来的にもっと複雑なモデルを追加する場合はJaxなどの自動微分を使うのが良いかもしれない。
 """
 
 def jacobian_lens_mapping(xx, yy, alpha_x, alpha_y):
@@ -469,6 +538,23 @@ def jacobian_lens_mapping(xx, yy, alpha_x, alpha_y):
     mask = np.abs(detA) > 1e-12
     mu[mask] = 1.0 / detA[mask]
 
+    return A11, A12, A21, A22, detA, mu
+
+
+def analytic_jacobian_lens_mapping(xx, yy, deflector_jacobian, lens_params):
+    """Compute A = d beta / d theta from analytic deflection derivatives."""
+    dalpha_x_dx, dalpha_x_dy, dalpha_y_dx, dalpha_y_dy = deflector_jacobian(
+        xx, yy, **lens_params,
+    )
+    A11 = 1.0 - dalpha_x_dx
+    A12 = -dalpha_x_dy
+    A21 = -dalpha_y_dx
+    A22 = 1.0 - dalpha_y_dy
+    detA = A11 * A22 - A12 * A21
+    mu = np.full_like(detA, np.inf, dtype=float)
+    mask = np.isfinite(detA) & (np.abs(detA) > 1e-12)
+    mu[mask] = 1.0 / detA[mask]
+    mu[~np.isfinite(detA)] = np.nan
     return A11, A12, A21, A22, detA, mu
 
 
@@ -596,8 +682,9 @@ def _arcsec_curve_to_pixel(curve_xy, pixscale_arcsec, nx, ny, x0_arcsec=0.0, y0_
     return np.column_stack([x_pix, y_pix])
 
 
-def compute_critical_lines_and_caustics(ctx, deflector, lens_params,
-                                        min_points=10, min_length=0.0):
+def compute_critical_lines_and_caustics(
+        ctx, deflector, lens_params, min_points=10, min_length=0.0,
+        deflector_jacobian=None):
     """
     Compute critical lines and caustics using ImageContext.
 
@@ -609,6 +696,9 @@ def compute_critical_lines_and_caustics(ctx, deflector, lens_params,
         Deflection function, e.g. deflection_SIE or deflection_SIE_plus_ES
     lens_params : dict
         Parameters passed to deflector
+    deflector_jacobian : callable, optional
+        Analytic derivatives of the deflection field. If omitted, use grid
+        finite differences for backward compatibility.
     min_points : int
         Minimum number of contour points to keep.
     min_length : float
@@ -632,7 +722,14 @@ def compute_critical_lines_and_caustics(ctx, deflector, lens_params,
     alpha_x, alpha_y = deflector(ctx.xx_img, ctx.yy_img, **lens_params)
 
     # Jacobian / magnification
-    _, _, _, _, detA, mu = jacobian_lens_mapping(ctx.xx_img, ctx.yy_img, alpha_x, alpha_y)
+    if deflector_jacobian is None:
+        _, _, _, _, detA, mu = jacobian_lens_mapping(
+            ctx.xx_img, ctx.yy_img, alpha_x, alpha_y,
+        )
+    else:
+        _, _, _, _, detA, mu = analytic_jacobian_lens_mapping(
+            ctx.xx_img, ctx.yy_img, deflector_jacobian, lens_params,
+        )
 
     # critical lines in image plane (arcsec)
     critical_lines = _extract_zero_contours(ctx.xx_img, ctx.yy_img, detA, level=0.0)
