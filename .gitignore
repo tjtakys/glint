@@ -5,7 +5,7 @@ __pycache__/
 
 # data
 *.fits
-*.ms
+*.ms/
 *.npz
 *.npy
 *.h5
@@ -14,13 +14,12 @@ configuration_files/
 sim_imaging/
 MS/
 
-# CASA log
+# CASA working data
+**/casa_work/
 casa-*.log
 
-# results
-chains/
-output/
-figures/
+# Compact forward-mass FITS products are publishable.
+!examples/forward_mass/output/**/products/**/*.fits
 
 # mac
 .DS_Store
