@@ -52,7 +52,13 @@ def run_least_squares(
 
 
 def run_parallel_fits(fit_fn, cases, *, max_workers=None):
-    """Run independent case fits in parallel and return results in input order."""
+    """独立した複数ケースを並列fitし、入力と同じ順序で結果を返す。
+
+    ``cases`` は各ケースの設定を格納したiterableで、通常は
+    ``{"name": ..., "data": ...}`` のようなdictのlistを想定する。
+    ``fit_fn`` はその1要素を受け取り、ケース固有のresidualを定義して
+    内部で ``run_least_squares`` を実行し、fit結果を返す関数。
+    """
     cases = tuple(cases)
     if not cases:
         return []
