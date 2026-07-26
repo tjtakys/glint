@@ -1,0 +1,18 @@
+{
+  "alma": {
+    "antenna_configuration": "../data/configuration_files/alma.cycle7.5.cfg",
+    "ground_temperature_k": 270.0,
+    "hour_angle": "0h",
+    "integration": "300s",
+    "random_seed": 20260718,
+    "reference_date": "2022/01/15",
+    "robust": 0.5,
+    "target_peak_sn": 20.0,
+    "total_time": "3600s",
+    "user_pwv_mm": 0.5,
+    "weighting": "natural"
+  },
+  "case_name": "bt50_re06",
+  "lensed_sha256": "e80abc4a95c7bd0f780451391a665c378b305133e4d8dba0c68aaa5c283c926c",
+  "schema_version": 1
+}

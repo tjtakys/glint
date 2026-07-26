@@ -1,0 +1,162 @@
+# Stage 3 settings. The mock galaxy, lens, grids, and spectral axis are shared
+# with the other stages through mock_truth.toml.
+
+[alma]
+antenna_configuration = "../data/configuration_files/alma.cycle7.5.cfg"
+integration = "300s"
+total_time = "3600s"
+reference_date = "2022/01/15"
+hour_angle = "0h"
+user_pwv_mm = 0.5
+ground_temperature_k = 270.0
+weighting = "natural"
+robust = 0.5
+random_seed = 20260718
+# Rescale only the CASA thermal-noise realization so that the final dirty cube
+# has this peak / line-free-channel RMS. The Stage 1 source flux is unchanged.
+target_peak_sn = 20.0
+
+[image_fit]
+line_free_edge_channels = 2
+fit_radius_arcsec = 3.0
+
+[parallel]
+max_workers = 32
+dynesty_workers_per_fit = 2
+start_method = "fork"
+
+[fit]
+free_parameters_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "bulge_to_total",
+    "bulge_effective_radius_kpc",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+free_parameters_no_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+
+[fit.bounds.log10_m_baryon]
+lower = 10.3
+upper = 11.7
+
+[fit.bounds.bulge_to_total]
+lower = 0.0
+upper = 0.75
+
+[fit.bounds.disk_scale_radius_kpc]
+lower = 0.40
+upper = 2.00
+
+[fit.bounds.bulge_effective_radius_kpc]
+lower = 0.10
+upper = 1.00
+
+[fit.bounds.log10_m200]
+lower = 10.5
+upper = 12.5
+
+[fit.bounds.source_x_arcsec]
+lower = -0.20
+upper = 0.70
+
+[fit.bounds.source_y_arcsec]
+lower = -0.40
+upper = 0.40
+
+[fit.bounds.flux_normalization]
+lower = 0.20
+upper = 2.00
+
+[fit.bounds.inclination_deg]
+lower = 20.0
+upper = 80.0
+
+[fit.bounds.position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.surface_brightness_scale_arcsec]
+lower = 0.05
+upper = 0.60
+
+[fit.bounds.velocity_dispersion_center_kms]
+lower = 5.0
+upper = 100.0
+
+[fit.bounds.velocity_dispersion_scale_arcsec]
+lower = 0.10
+upper = 2.00
+
+[fit.bounds.systemic_velocity_kms]
+lower = -100.0
+upper = 100.0
+
+[fit.bounds.einstein_radius_arcsec]
+lower = 0.70
+upper = 1.70
+
+[fit.bounds.lens_axis_ratio]
+lower = 0.50
+upper = 0.999
+
+[fit.bounds.lens_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.log10_external_shear]
+lower = -4.0
+upper = -0.5
+
+[fit.bounds.external_shear_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.external_convergence]
+lower = -0.20
+upper = 0.20
+
+[dynesty]
+nlive_init = 150
+nlive_batch = 100
+dlogz_init = 0.30
+pfrac = 0.50
+evidence_threshold = 0.20
+target_n_effective = 2000
+max_batches = 10
+bound = "multi"
+sample = "rwalk"
+random_seed = 20260728
