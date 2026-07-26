@@ -1,8 +1,10 @@
 """
-logprob functionは個々のnotebookに書く
+residual / logprob functionは個々のnotebookに書く
 """
 
 from __future__ import annotations
+import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Callable, Optional, Tuple, Dict, Any
 
@@ -13,33 +15,70 @@ import emcee
 
 
 # ------------------- fitting utilities -------------------
-def run_least_squares(residual_fn, x0, lb, ub, *, ftol=1e-6, xtol=1e-6, gtol=1e-6, max_nfev=1000):
+def run_least_squares(
+        residual_fn, x0, lb, ub, *, method="trf", x_scale="jac",
+        ftol=1e-6, xtol=1e-6, gtol=1e-6, max_nfev=1000, verbose=0):
     """
-    residual_fn(theta) は、観測データとモデルの差を返すベクトル関数（例: (obs - model) / noise）。
-    method = "trf" (default) 
+    residual_fn(theta) は、観測データとモデルの差を返すベクトル関数（例: (obs - model) / noise）
+    method = "trf" (default): 境界付き最適化用
+    x_scale = "jac": パラメータのスケールをヤコビアンのスケールに合わせる
+    ftol: 目的関数の許容誤差
+    xtol: パラメータの許容誤差
+    gtol: 勾配の許容誤差
     """
-    x0 = np.asarray(x0, float)
-    lb = np.asarray(lb, float)
-    ub = np.asarray(ub, float)
-
-    result = least_squares(
-        residual_fn, 
-        x0=x0, 
-        bounds=(lb, ub), 
-        method="trf",
-        x_scale='jac',
-        ftol=ftol, xtol=xtol, gtol=gtol, 
+    x0 = np.asarray(x0, dtype=float)
+    lb = np.asarray(lb, dtype=float)
+    ub = np.asarray(ub, dtype=float)
+    if x0.ndim != 1 or lb.shape != x0.shape or ub.shape != x0.shape:
+        raise ValueError("x0, lb, and ub must be one-dimensional arrays with equal shape.")
+    if not np.all(np.isfinite(x0)) or not np.all(np.isfinite(lb)) or not np.all(np.isfinite(ub)):
+        raise ValueError("x0, lb, and ub must be finite.")
+    if np.any(lb >= ub):
+        raise ValueError("Every lower bound must be smaller than its upper bound.")
+    if np.any((x0 < lb) | (x0 > ub)):
+        raise ValueError("x0 must lie within the parameter bounds.")
+    return least_squares(
+        residual_fn,
+        x0=x0,
+        bounds=(lb, ub),
+        method=method,
+        x_scale=x_scale,
+        ftol=ftol,
+        xtol=xtol,
+        gtol=gtol,
         max_nfev=max_nfev,
-        verbose=2
+        verbose=verbose,
     )
-    print("success:", result.success, result.message)
-    return result
+
+
+def run_parallel_fits(fit_fn, cases, *, max_workers=None):
+    """Run independent case fits in parallel and return results in input order."""
+    cases = tuple(cases)
+    if not cases:
+        return []
+    cpu_count = os.cpu_count() or 1
+    if max_workers is None:
+        max_workers = cpu_count
+    max_workers = min(len(cases), int(max_workers), cpu_count)
+    if max_workers < 1:
+        raise ValueError("max_workers must be >= 1.")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        return list(executor.map(fit_fn, cases))
 
 
 
 # ------------------- MCMC utilities -------------------
 
 LogProbFn = Callable[[np.ndarray], float]
+
+_FORKED_LOGPROB_FN: Optional[LogProbFn] = None
+
+
+def _evaluate_forked_logprob(theta):
+    if _FORKED_LOGPROB_FN is None:
+        raise RuntimeError("Parallel log-probability worker was not initialized.")
+    return _FORKED_LOGPROB_FN(theta)
+
 
 def logprior_box(theta, lb, ub):
     """
@@ -105,25 +144,41 @@ def run_emcee(logprob_fn, x0, lb, ub, *, nwalkers=None, burnin=2000, production=
         sampler.reset()
         sampler.run_mcmc(state.coords, production, progress=progress)
     else:
-        with mp.Pool(processes=ncpu) as pool:
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, logprob_fn, pool=pool)
-            
-            # --- burn-in ---
-            print(f"Running burn-in with {ncpu} CPUs...")
-            state = sampler.run_mcmc(pos0, burnin, progress=progress)
-            
-            # --- burn-in後のパラメータ分散をチェック ---
-            acc = np.mean(sampler.acceptance_fraction)
+        if "fork" not in mp.get_all_start_methods():
+            raise RuntimeError(
+                "Parallel run_emcee requires the multiprocessing 'fork' start method "
+                "when logprob_fn is defined inside a notebook function."
+            )
 
-            spread = np.std(state.coords, axis=0) / width  # walker間の相対的なばらつき（各パラメータごと）
-            print(f"[burnin] acceptance mean = {acc:.3f}")
-            print(f"[burnin] min std over dims = {spread.min():.3e}, median std = {np.median(spread):.3e}")
-            sampler.reset()
+        global _FORKED_LOGPROB_FN
+        _FORKED_LOGPROB_FN = logprob_fn
+        try:
+            with mp.get_context("fork").Pool(processes=ncpu) as pool:
+                sampler = emcee.EnsembleSampler(
+                    nwalkers,
+                    ndim,
+                    _evaluate_forked_logprob,
+                    pool=pool,
+                )
 
-            # --- production ---
-            print(f"Running production with {ncpu} CPUs...")
-            # burn-inですでに結構収束していると、initial state checkで線型独立になってない、というエラーになることがある。これをスキップするオプションを追加。
-            sampler.run_mcmc(state.coords, production, skip_initial_state_check=skip_initial_state_check, progress=progress)
+                # --- burn-in ---
+                print(f"Running burn-in with {ncpu} CPUs...")
+                state = sampler.run_mcmc(pos0, burnin, progress=progress)
+
+                # --- burn-in後のパラメータ分散をチェック ---
+                acc = np.mean(sampler.acceptance_fraction)
+
+                spread = np.std(state.coords, axis=0) / width  # walker間の相対的なばらつき（各パラメータごと）
+                print(f"[burnin] acceptance mean = {acc:.3f}")
+                print(f"[burnin] min std over dims = {spread.min():.3e}, median std = {np.median(spread):.3e}")
+                sampler.reset()
+
+                # --- production ---
+                print(f"Running production with {ncpu} CPUs...")
+                # burn-inですでに結構収束していると、initial state checkで線型独立になってない、というエラーになることがある。これをスキップするオプションを追加。
+                sampler.run_mcmc(state.coords, production, skip_initial_state_check=skip_initial_state_check, progress=progress)
+        finally:
+            _FORKED_LOGPROB_FN = None
 
     
     # ==========================
