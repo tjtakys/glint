@@ -1,0 +1,63 @@
+# Common parameters used to generate the noiseless mock data in every stage.
+
+[target]
+redshift = 6.024
+phase_center_ra_deg = 135.1909708333
+phase_center_dec_deg = 0.6897777778
+
+[grid.image]
+pixel_size_arcsec = 0.030
+grid_size = 200
+x_center_arcsec = 0.0
+y_center_arcsec = 0.0
+
+[grid.source]
+# Three times finer than the image grid for numerical source-plane sampling.
+pixel_size_arcsec = 0.010
+grid_size = 100
+x_center_arcsec = 0.285
+y_center_arcsec = 0.030
+
+[spectral]
+rest_frequency_hz = 1.9005369e12
+velocity_min_kms = -350.0
+velocity_max_kms = 350.0
+channel_width_kms = 25.0
+spectral_resolution_sigma_kms = 25.0
+
+[radial_profile]
+radius_max_kpc = 5
+radial_step_arcsec = 0.01
+
+[truth.mass]
+total_baryonic_mass_msun = 1.0e11
+disk_scale_radius_kpc = 1.0
+bulge_to_total_values = [0.10, 0.25, 0.50]
+bulge_effective_radii_kpc = [0.30, 0.60]
+include_no_bulge_case = true
+halo_mass_200_msun = 3.0e11
+halo_concentration_200 = 3.0
+
+[truth.source]
+source_x_arcsec = 0.285
+source_y_arcsec = 0.030
+flux_normalization = 1.0
+inclination_deg = 45.0
+position_angle_deg = 35.0
+surface_brightness_scale_arcsec = 0.22
+velocity_dispersion_center_kms = 30.0
+velocity_dispersion_scale_arcsec = 0.80
+systemic_velocity_kms = 0.0
+
+[truth.lens]
+lens_x_arcsec = 0.0
+lens_y_arcsec = 0.0
+einstein_radius_arcsec = 1.20
+lens_axis_ratio = 0.95
+lens_position_angle_deg = 90.0
+log10_external_shear = -2.0
+external_shear_position_angle_deg = 45.0
+external_convergence = 0.0
+
+[mock_numerics]
+lensing_interpolation_order = 1
