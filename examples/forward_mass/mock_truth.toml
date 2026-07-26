@@ -20,8 +20,8 @@ y_center_arcsec = 0.030
 
 [spectral]
 rest_frequency_hz = 1.9005369e12
-velocity_min_kms = -350.0
-velocity_max_kms = 350.0
+velocity_min_kms = -400.0
+velocity_max_kms = 400.0
 channel_width_kms = 25.0
 spectral_resolution_sigma_kms = 25.0
 
