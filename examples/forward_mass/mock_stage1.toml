@@ -6,7 +6,7 @@ max_workers = 7
 free_parameters = [
     "log10_m_baryon",
     "disk_scale_radius_kpc",
-    "log10_m200",
+#    "log10_m200",
     "bulge_to_total",
     "bulge_effective_radius_kpc",
     "source_x_arcsec",
@@ -18,14 +18,12 @@ free_parameters = [
     "velocity_dispersion_center_kms",
     "velocity_dispersion_scale_arcsec",
     "systemic_velocity_kms",
-    "lens_x_arcsec",
-    "lens_y_arcsec",
     "einstein_radius_arcsec",
     "lens_axis_ratio",
     "lens_position_angle_deg",
     "log10_external_shear",
-    "external_shear_position_angle_deg",
-    "external_convergence",
+#    "external_shear_position_angle_deg",
+#    "external_convergence",
 ]
 
 [bounds.log10_m_baryon]
@@ -97,16 +95,6 @@ initial = 1.00
 lower = -100.0
 upper = 100.0
 initial = 10.0
-
-[bounds.lens_x_arcsec]
-lower = -0.20
-upper = 0.20
-initial = 0.02
-
-[bounds.lens_y_arcsec]
-lower = -0.20
-upper = 0.20
-initial = -0.02
 
 [bounds.einstein_radius_arcsec]
 lower = 0.70
