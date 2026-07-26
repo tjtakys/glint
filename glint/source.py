@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.special import erf, gammaincinv
+from scipy.special import erf
+
 
 
 ###################
@@ -61,13 +62,6 @@ def total_flux(map, pixsize_arcsec):
 # 3D model
 ###################
 # q_int（固有軸比）オプションを追加して再保存
-import importlib.util, sys, numpy as np
-from scipy.special import erf
-from typing import Optional, Union, Callable, Tuple
-import inspect
-
-import numpy as np
-from scipy.special import erf
 
 def make_rotating_disk_cube(
     XX, YY,                 # (ny, nx)   事前作成の像面座標[arcsec]（右=+x, 上=+y）
