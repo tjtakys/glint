@@ -3,7 +3,8 @@
     "antenna_configuration": "../data/configuration_files/alma.cycle7.5.cfg",
     "ground_temperature_k": 270.0,
     "hour_angle": "0h",
-    "integration": "300s",
+    "integration": "10s",
+    "max_uv_distance_m": 12,
     "random_seed": 20260718,
     "reference_date": "2022/01/15",
     "robust": 0.5,
@@ -14,5 +15,5 @@
   },
   "case_name": "bt25_re03",
   "lensed_sha256": "a119dc7963130fa4cba36e3e108822fce68dfb4366d78e1f0df1f40098de4bc3",
-  "schema_version": 1
+  "schema_version": 2
 }
