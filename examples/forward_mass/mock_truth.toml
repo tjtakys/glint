@@ -32,9 +32,11 @@ radial_step_arcsec = 0.01
 [truth.mass]
 total_baryonic_mass_msun = 1.0e11
 disk_scale_radius_kpc = 1.0
-bulge_to_total_values = [0.10, 0.25, 0.50]
-bulge_effective_radii_kpc = [0.30, 0.60]
-include_no_bulge_case = true
+bulge_to_total_values = [0.50]
+#bulge_to_total_values = [0.10, 0.25, 0.50]
+bulge_effective_radii_kpc = [0.30]
+#bulge_effective_radii_kpc = [0.30, 0.60]
+include_no_bulge_case = false
 halo_mass_200_msun = 3.0e11
 halo_concentration_200 = 3.0
 
