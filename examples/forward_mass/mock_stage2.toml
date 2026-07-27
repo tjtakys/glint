@@ -10,6 +10,10 @@ truncate_sigma = 4.0
 peak_signal_to_noise = 10.0
 random_seed = 20260726
 
+[image_fit]
+# Broad circular aperture containing the complete lensed source and PSF wings.
+fit_radius_arcsec = 2.5
+
 [parallel]
 max_workers = 1
 # Number of concurrent likelihood evaluations inside each Dynesty fit.
@@ -43,7 +47,22 @@ free_parameters_bulge = [
 free_parameters_no_bulge = [
     "log10_m_baryon",
     "disk_scale_radius_kpc",
-    "log10_m200",
+#    "log10_m200",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
 ]
 
 [fit.bounds.log10_m_baryon]

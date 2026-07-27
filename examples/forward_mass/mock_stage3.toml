@@ -18,18 +18,18 @@ target_peak_sn = 20.0
 
 [image_fit]
 line_free_edge_channels = 2
-fit_radius_arcsec = 3.0
+fit_radius_arcsec = 2.5
 
 [parallel]
-max_workers = 32
-dynesty_workers_per_fit = 2
+max_workers = 2
+dynesty_workers_per_fit = 16
 start_method = "fork"
 
 [fit]
 free_parameters_bulge = [
     "log10_m_baryon",
     "disk_scale_radius_kpc",
-    "log10_m200",
+#    "log10_m200",
     "bulge_to_total",
     "bulge_effective_radius_kpc",
     "source_x_arcsec",
