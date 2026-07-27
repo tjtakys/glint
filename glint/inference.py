@@ -12,6 +12,7 @@ import numpy as np
 import multiprocessing as mp
 from scipy.optimize import least_squares
 import emcee
+import dynesty
 
 
 # ------------------- fitting utilities -------------------
@@ -73,8 +74,78 @@ def run_parallel_fits(fit_fn, cases, *, max_workers=None):
 
 
 
-# ------------------- MCMC utilities -------------------
+# ------------------- dynesty utilities -------------------
+def run_dynesty(
+        loglikelihood, prior_transform, ndim, *, nlive=500, dlogz=0.1,
+        bound="multi", sample="rwalk", rstate=None, print_progress=True):
+    """dynestyによるnested samplingを実行し、sampling結果を返す。
 
+    ``loglikelihood(theta)`` と、単位cubeをparameterへ変換する
+    ``prior_transform(unit_cube)`` はデータごとに呼び出し側で定義する。
+    """
+    if int(ndim) < 1:
+        raise ValueError("ndim must be >= 1.")
+    sampler = dynesty.NestedSampler(
+        loglikelihood,
+        prior_transform,
+        int(ndim),
+        nlive=int(nlive),
+        bound=bound,
+        sample=sample,
+        rstate=rstate,
+    )
+    sampler.run_nested(dlogz=float(dlogz), print_progress=print_progress)
+    return sampler.results
+
+
+def run_dynamic_dynesty(
+        loglikelihood, prior_transform, ndim, *, nlive_init=500,
+        nlive_batch=500, dlogz_init=0.1, pfrac=0.5,
+        evidence_threshold=0.1, target_n_effective=10000,
+        max_batches=None, bound="multi", sample="rwalk", rstate=None,
+        pool=None, queue_size=None, use_pool=None, print_progress=True):
+    """DynamicNestedSamplerを実行し、sampling結果を返す。
+
+    ``pfrac`` は追加samplingをposteriorへ割り当てる割合で、0なら
+    evidenceのみ、1ならposteriorのみを優先する。
+    ``pool`` と ``queue_size`` を指定するとlikelihood評価を並列化できる。
+    """
+    if dynesty is None:
+        raise ImportError("run_dynamic_dynesty requires the optional 'dynesty' package.")
+    if int(ndim) < 1:
+        raise ValueError("ndim must be >= 1.")
+    if not 0.0 <= float(pfrac) <= 1.0:
+        raise ValueError("pfrac must be between 0 and 1.")
+    sampler = dynesty.DynamicNestedSampler(
+        loglikelihood,
+        prior_transform,
+        int(ndim),
+        nlive=int(nlive_init),
+        bound=bound,
+        sample=sample,
+        rstate=rstate,
+        pool=pool,
+        queue_size=queue_size,
+        use_pool=use_pool,
+    )
+    sampler.run_nested(
+        nlive_init=int(nlive_init),
+        nlive_batch=int(nlive_batch),
+        dlogz_init=float(dlogz_init),
+        wt_kwargs={"pfrac": float(pfrac)},
+        stop_kwargs={
+            "pfrac": float(pfrac),
+            "evid_thresh": float(evidence_threshold),
+            "target_n_effective": int(target_n_effective),
+        },
+        maxbatch=None if max_batches is None else int(max_batches),
+        print_progress=print_progress,
+    )
+    return sampler.results
+
+
+
+# ------------------- MCMC utilities -------------------
 LogProbFn = Callable[[np.ndarray], float]
 
 _FORKED_LOGPROB_FN: Optional[LogProbFn] = None
