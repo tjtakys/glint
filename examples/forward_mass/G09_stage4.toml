@@ -26,7 +26,7 @@ rest_frequency_hz = 1.9005369e12
 
 [grid.image]
 pixel_size_arcsec = 0.020
-grid_size = 201
+grid_size = 200
 x_center_arcsec = 0.0
 y_center_arcsec = 0.0
 
@@ -85,7 +85,7 @@ free_parameters_bulge = [
     "source_x_arcsec",
     "source_y_arcsec",
     "flux_normalization",
-    "inclination_deg",
+#    "inclination_deg",
     "position_angle_deg",
     "surface_brightness_scale_arcsec",
     "velocity_dispersion_center_kms",
@@ -105,7 +105,7 @@ free_parameters_no_bulge = [
     "source_x_arcsec",
     "source_y_arcsec",
     "flux_normalization",
-    "inclination_deg",
+#    "inclination_deg",
     "position_angle_deg",
     "surface_brightness_scale_arcsec",
     "velocity_dispersion_center_kms",
