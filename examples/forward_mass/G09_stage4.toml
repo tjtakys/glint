@@ -1,0 +1,219 @@
+# G09 [C II] visibility-domain mass-model fit.
+# Paths are resolved relative to examples/forward_mass.
+
+[data]
+processed_uv_archive = "../sim_imaging/G09.processed_uv_CII.all.npz"
+processed_measurement_sets = [
+    "../data/MS/Band6.tsujita.ms.contsub.tbin.chbin",
+    "../data/MS/Band6.tadaki.ms.contsub.tbin.chbin",
+    "../data/MS/Band6.riechers.ms.contsub.tbin.chbin",
+]
+raw_measurement_sets = [
+    "../../../../G09/data/ALMA/Band6/combined/MS/Band6.tsujita.ms.contsub",
+    "../../../../G09/data/ALMA/Band6/combined/MS/Band6.tadaki.ms.contsub",
+    "../../../../G09/data/ALMA/Band6/combined/MS/Band6.riechers.ms.contsub",
+]
+# Remove baselines sensitive to angular scales larger than the modeled field.
+max_angular_scale_arcsec = 4.0
+# Zero uses every unflagged visibility; positive values are deterministic
+# per-channel limits for a quick end-to-end test.
+max_visibilities_per_channel = 0
+finufft_tolerance = 1.0e-6
+
+[target]
+redshift = 6.024
+rest_frequency_hz = 1.9005369e12
+
+[grid.image]
+pixel_size_arcsec = 0.020
+grid_size = 201
+x_center_arcsec = 0.0
+y_center_arcsec = 0.0
+
+[grid.source]
+pixel_size_arcsec = 0.005
+grid_size = 200
+x_center_arcsec = 0.0
+y_center_arcsec = 0.0
+
+[radial_profile]
+radius_max_kpc = 5.0
+radial_step_arcsec = 0.005
+
+[model]
+halo_concentration_200 = 3.0
+lensing_interpolation_order = 1
+
+# Baseline values fill parameters that are not free. Source/lens values are
+# initialized from the existing G09 moment-0 analysis; they are not truth.
+[model.baseline]
+log10_m_baryon = 11.0
+disk_scale_radius_kpc = 1.0
+log10_m200 = 11.5
+bulge_to_total = 0.25
+bulge_effective_radius_kpc = 0.50
+source_x_arcsec = 0.0348
+source_y_arcsec = 0.0291
+# The old moment-0 Sersic amplitude (9.45) uses a different profile
+# normalization. Visibility-amplitude matching for this exponential tracer
+# gives an order-0.3 Jy/arcsec^2 baseline.
+flux_normalization = 0.33
+inclination_deg = 31.97
+position_angle_deg = 100.41
+surface_brightness_scale_arcsec = 0.20
+velocity_dispersion_center_kms = 120.0
+velocity_dispersion_scale_arcsec = 0.50
+systemic_velocity_kms = 0.0
+# HST Gaussian centroid relative to the ALMA image/phase center.
+lens_x_arcsec = 0.217
+lens_y_arcsec = 0.290
+einstein_radius_arcsec = 1.284
+lens_axis_ratio = 0.956
+lens_position_angle_deg = 136.27
+log10_external_shear = -1.275
+external_shear_position_angle_deg = 62.52
+external_convergence = 0.0
+
+[fit]
+# Keep common nuisance/mass parameters identical between the two models.
+free_parameters_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "bulge_to_total",
+    "bulge_effective_radius_kpc",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+free_parameters_no_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+
+[fit.bounds.log10_m_baryon]
+lower = 10.0
+upper = 12.0
+
+[fit.bounds.disk_scale_radius_kpc]
+lower = 0.20
+upper = 3.00
+
+[fit.bounds.log10_m200]
+lower = 10.0
+upper = 13.0
+
+[fit.bounds.bulge_to_total]
+lower = 0.0
+upper = 0.75
+
+[fit.bounds.bulge_effective_radius_kpc]
+lower = 0.05
+upper = 1.50
+
+[fit.bounds.source_x_arcsec]
+lower = -0.20
+upper = 0.30
+
+[fit.bounds.source_y_arcsec]
+lower = -0.20
+upper = 0.30
+
+[fit.bounds.flux_normalization]
+lower = 0.01
+upper = 3.0
+
+[fit.bounds.inclination_deg]
+lower = 10.0
+upper = 80.0
+
+[fit.bounds.position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.surface_brightness_scale_arcsec]
+lower = 0.03
+upper = 0.60
+
+[fit.bounds.velocity_dispersion_center_kms]
+lower = 5.0
+upper = 250.0
+
+[fit.bounds.velocity_dispersion_scale_arcsec]
+lower = 0.03
+upper = 2.00
+
+[fit.bounds.systemic_velocity_kms]
+lower = -100.0
+upper = 100.0
+
+[fit.bounds.einstein_radius_arcsec]
+lower = 1.00
+upper = 1.60
+
+[fit.bounds.lens_axis_ratio]
+lower = 0.75
+upper = 0.999
+
+[fit.bounds.lens_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.log10_external_shear]
+lower = -4.0
+upper = -0.5
+
+[fit.bounds.external_shear_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.external_convergence]
+lower = -0.20
+upper = 0.20
+
+[parallel]
+# There are only two independent tasks: bulge and no_bulge.
+max_workers = 2
+# Each Dynesty thread owns a separate UVContext/FINUFFT plan set.
+dynesty_workers_per_fit = 8
+start_method = "fork"
+
+[dynesty]
+nlive_init = 150
+nlive_batch = 100
+dlogz_init = 0.30
+pfrac = 0.50
+evidence_threshold = 0.20
+target_n_effective = 2000
+max_batches = 10
+bound = "multi"
+sample = "rwalk"
+random_seed = 20260728
