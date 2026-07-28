@@ -1,0 +1,153 @@
+# Stage 4 settings. Mock truth and the Stage 3-1 ALMA products are reused.
+
+[uv_fit]
+# Zero uses every unflagged visibility. A positive value deterministically
+# limits each channel for quick tests.
+max_visibilities_per_channel = 0
+finufft_tolerance = 1.0e-6
+# CASA weightの相対比を使い、絶対スケールだけline-free dataで較正する。
+noise_sigma_source = "scaled_exported"
+line_free_edge_channels = 2
+
+[parallel]
+# case × bulge/no-bulgeを独立processで並列実行する。
+max_workers = 16
+# FINUFFT planを同じfit内で同時使用しないため1に固定する。
+dynesty_workers_per_fit = 1
+start_method = "fork"
+
+[fit]
+free_parameters_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "bulge_to_total",
+    "bulge_effective_radius_kpc",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+free_parameters_no_bulge = [
+    "log10_m_baryon",
+    "disk_scale_radius_kpc",
+    "log10_m200",
+    "source_x_arcsec",
+    "source_y_arcsec",
+    "flux_normalization",
+    "inclination_deg",
+    "position_angle_deg",
+    "surface_brightness_scale_arcsec",
+    "velocity_dispersion_center_kms",
+    "velocity_dispersion_scale_arcsec",
+    "systemic_velocity_kms",
+    "einstein_radius_arcsec",
+    "lens_axis_ratio",
+    "lens_position_angle_deg",
+    "log10_external_shear",
+    "external_shear_position_angle_deg",
+    "external_convergence",
+]
+
+[fit.bounds.log10_m_baryon]
+lower = 10.3
+upper = 11.7
+
+[fit.bounds.bulge_to_total]
+lower = 0.0
+upper = 0.75
+
+[fit.bounds.disk_scale_radius_kpc]
+lower = 0.40
+upper = 2.00
+
+[fit.bounds.bulge_effective_radius_kpc]
+lower = 0.10
+upper = 1.00
+
+[fit.bounds.log10_m200]
+lower = 10.5
+upper = 12.5
+
+[fit.bounds.source_x_arcsec]
+lower = -0.20
+upper = 0.70
+
+[fit.bounds.source_y_arcsec]
+lower = -0.40
+upper = 0.40
+
+[fit.bounds.flux_normalization]
+lower = 0.20
+upper = 2.00
+
+[fit.bounds.inclination_deg]
+lower = 20.0
+upper = 80.0
+
+[fit.bounds.position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.surface_brightness_scale_arcsec]
+lower = 0.05
+upper = 0.60
+
+[fit.bounds.velocity_dispersion_center_kms]
+lower = 5.0
+upper = 100.0
+
+[fit.bounds.velocity_dispersion_scale_arcsec]
+lower = 0.10
+upper = 2.00
+
+[fit.bounds.systemic_velocity_kms]
+lower = -100.0
+upper = 100.0
+
+[fit.bounds.einstein_radius_arcsec]
+lower = 0.70
+upper = 1.70
+
+[fit.bounds.lens_axis_ratio]
+lower = 0.50
+upper = 0.999
+
+[fit.bounds.lens_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.log10_external_shear]
+lower = -4.0
+upper = -0.5
+
+[fit.bounds.external_shear_position_angle_deg]
+lower = 0.0
+upper = 180.0
+
+[fit.bounds.external_convergence]
+lower = -0.20
+upper = 0.20
+
+[dynesty]
+nlive_init = 150
+nlive_batch = 100
+dlogz_init = 0.30
+pfrac = 0.50
+evidence_threshold = 0.20
+target_n_effective = 2000
+max_batches = 10
+bound = "multi"
+sample = "rwalk"
+random_seed = 20260729
