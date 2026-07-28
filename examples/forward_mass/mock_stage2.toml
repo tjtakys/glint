@@ -15,9 +15,9 @@ random_seed = 20260726
 fit_radius_arcsec = 2.5
 
 [parallel]
-max_workers = 1
+max_workers = 16
 # Number of concurrent likelihood evaluations inside each Dynesty fit.
-dynesty_workers_per_fit = 16
+dynesty_workers_per_fit = 2
 start_method = "fork"
 
 [fit]
@@ -25,7 +25,7 @@ start_method = "fork"
 free_parameters_bulge = [
     "log10_m_baryon",
     "disk_scale_radius_kpc",
-#    "log10_m200",
+    "log10_m200",
     "bulge_to_total",
     "bulge_effective_radius_kpc",
     "source_x_arcsec",
@@ -47,7 +47,7 @@ free_parameters_bulge = [
 free_parameters_no_bulge = [
     "log10_m_baryon",
     "disk_scale_radius_kpc",
-#    "log10_m200",
+    "log10_m200",
     "source_x_arcsec",
     "source_y_arcsec",
     "flux_normalization",
