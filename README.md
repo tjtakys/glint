@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo/logo.png" style="width:420px; display:block; margin:auto;">
+  <img src="docs/logo/schematics.png" style="width:420px; display:block; margin:auto;">
 </p>
 
 # GLINT
