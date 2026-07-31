@@ -1,48 +1,52 @@
 import numpy as np
 
-def _normalize_kernel(kernel):
-    """Normalize a 2D kernel so that its peak is 1."""
-    kernel_max = np.max(kernel)
-    if kernel_max > 0:
-        return kernel / kernel_max
-    else:
-        raise ValueError("Kernel max is zero or negative, cannot normalize.")
+FWHM_TO_SIGMA = 1 / (2 * np.sqrt(2 * np.log(2)))
+
+
+def _gaussian_beam(npix, sigma_major_pix, sigma_minor_pix, position_angle_deg):
+    """
+    畳み込む前の単位： Jy/pix から 畳み込んだ後 Jy/beam への変換のために、beamをpeak=1に規格化する。
+    """
+    if npix <= 0 or npix % 2 == 0:
+        raise ValueError("npix must be a positive odd integer")
+
+    coordinate = np.arange(npix, dtype=float) - (npix - 1) / 2
+    xx, yy = np.meshgrid(coordinate, coordinate)
+    angle = np.deg2rad(position_angle_deg)
+    # 受動回転
+    x_major =  np.cos(angle) * xx + np.sin(angle) * yy
+    y_minor = -np.sin(angle) * xx + np.cos(angle) * yy
+    beam = np.exp(-0.5 * ((x_major / sigma_major_pix) ** 2 + (y_minor / sigma_minor_pix) ** 2))
+    return beam / beam.max()
 
 
 def cleanbeam_from_header(npix, header):
     """
-    正方形 (npix, npix) の復元ビームPSFを生成。npixは奇数とする。
+    npixは奇数とする。
     - BMAJ, BMIN : FWHM [deg]
-    - BPA        : [deg], 北方向が0度、西方向が0度
-
-    戻り値: (npix, npix) の正規化PSF
+    - BPA        : [deg], 北方向が0度、東方向が90度
+    peak = 1 に規格化
     """
-    if npix % 2 == 0:
-        raise ValueError("npix should be odd to center the beam at a pixel.")
+    pixel_size_deg = abs(header["CDELT2"])
+    sigma_major_pix = header["BMAJ"] / pixel_size_deg * FWHM_TO_SIGMA
+    sigma_minor_pix = header["BMIN"] / pixel_size_deg * FWHM_TO_SIGMA
 
-    # FWHM → σ [pixel]
-    BMAJ = header['BMAJ']
-    BMIN = header['BMIN']
-    BPA  = header['BPA']
-    pixscale = np.abs(header['CDELT2']) 
-    
-    FWHM_x_pix = BMAJ / pixscale
-    FWHM_y_pix = BMIN / pixscale
-    sx_pix = FWHM_x_pix / (2.0*np.sqrt(2*np.log(2)))
-    sy_pix = FWHM_y_pix / (2.0*np.sqrt(2*np.log(2)))
+    # FITS BPA is measured from north through east; array angle is from +x.
+    position_angle_deg = 90 + header["BPA"]
+    return _gaussian_beam(npix, sigma_major_pix, sigma_minor_pix, position_angle_deg)
 
-    # FITS BPA(北方向=0度) → NumPy rotation(西方向=0度)
-    theta = np.deg2rad(90.0 + BPA)
-    c, s = np.cos(theta), np.sin(theta)
 
-    yy, xx = np.indices((npix, npix))
-    cy, cx = (npix-1)/2.0, (npix-1)/2.0
-    x = xx - cx
-    y = yy - cy
 
-    # 受動回転（major軸が x'）
-    xp =  c*x + s*y
-    yp =  -s*x + c*y
+def gaussian_psf_kernel(
+    pixel_size_arcsec,
+    fwhm_major_arcsec,
+    fwhm_minor_arcsec,
+    position_angle_deg=0,
+    truncate_sigma=4,
+):
+    """Create a peak-normalized Gaussian beam from angular FWHM values."""
+    sigma_major_pix = fwhm_major_arcsec / pixel_size_arcsec * FWHM_TO_SIGMA
+    sigma_minor_pix = fwhm_minor_arcsec / pixel_size_arcsec * FWHM_TO_SIGMA
+    half_size = int(np.ceil(truncate_sigma * max(sigma_major_pix, sigma_minor_pix)))
 
-    k = np.exp(-0.5*((xp/sx_pix)**2 + (yp/sy_pix)**2))
-    return _normalize_kernel(k)
+    return _gaussian_beam(2 * half_size + 1,sigma_major_pix,sigma_minor_pix,position_angle_deg)
