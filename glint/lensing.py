@@ -112,7 +112,7 @@ def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
         Shear amplitude in log10 scale.
         gamma = 10**log_gamma
     pa_gamma : float
-        Shear position angle.  gamma1 = gamma cos(2pa_gamma), gamma2 = gamma sin(2pa_gamma).
+        Shear position angle in radians.  gamma1 = gamma cos(2pa_gamma), gamma2 = gamma sin(2pa_gamma).
         pa_gamma ∈ [0, π/2) is sufficient
     kappa : float
         Convergence (mass sheet).
@@ -135,6 +135,7 @@ def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
 def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa):
     """
     Combined deflection from SIE + external shear.
+    pa, pa_gamma: in radians
     """
     alpha_x_sie, alpha_y_sie = deflection_SIE(xx, yy, x0, y0, b, q, pa)
     alpha_x_es, alpha_y_es = deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa)
@@ -144,7 +145,9 @@ def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa)
 
 
 def deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
-    """Analytic derivatives of the SIE deflection field."""
+    """Analytic derivatives of the SIE deflection field.
+    pa: in radians
+    """
     x_shift = xx - x0
     y_shift = yy - y0
     cos_pa = np.cos(pa)
@@ -187,8 +190,10 @@ def deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
     ))
 
 
-def deflection_jacobian_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
-    """Analytic derivatives of the external-shear deflection field."""
+def deflection_jacobian_ES(xx, yy, log_gamma, pa_gamma, kappa=0.0):
+    """Analytic derivatives of the external-shear deflection field.
+    pa_gamma: in radians
+    """
     gamma = 10**log_gamma
     gamma1 = gamma * np.cos(2.0 * pa_gamma)
     gamma2 = gamma * np.sin(2.0 * pa_gamma)
@@ -203,30 +208,24 @@ def deflection_jacobian_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
 
 def deflection_jacobian_SIE_plus_ES(
         xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa):
-    """Analytic derivatives of the combined SIE and external-shear deflection."""
+    """Analytic derivatives of the combined SIE and external-shear deflection.
+    pa_gamma: in radians
+    """
     sie = deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa)
-    shear = deflection_jacobian_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa)
+    shear = deflection_jacobian_ES(xx, yy, log_gamma, pa_gamma, kappa)
     return tuple(sie_term + shear_term for sie_term, shear_term in zip(sie, shear))
     
 
 # -------------------------- Mapping source to image -------------------------- #
 def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
     """
-    Create a 2D coordinate grid in arcseconds with a sky-like convention.
+    Create a 2D coordinate grid in arcseconds.
 
-    Coordinate convention
-    ---------------------
-    • +x direction = to the RIGHT in the array = WEST on the sky (= -RA)
-    • +y direction = UPWARD on the sky = +Dec (North)
-
-    Important:
-    NumPy arrays index rows downward (row index increases toward the bottom).
-    To make +y correspond to North (up on the sky), we introduce a minus sign
-    in the y-coordinate definition below.
-
-    This ensures that:
-        increasing x  → move right  → RA decreases
-        increasing y  → move up     → Dec increases
+    Coordinate convention:
+      • +x follows increasing column index (image right)
+           = west = -RA = -l
+      • +y follows increasing row index
+           = north = +Dec = +m
 
     Parameters
     ----------
