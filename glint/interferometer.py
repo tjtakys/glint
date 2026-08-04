@@ -41,22 +41,22 @@ class ProcessedUVData:
     def spec_res_sigma_kms(self) -> float:
         if self.nchan < 2:
             raise ValueError("At least two velocity channels are required to infer spectral resolution.")
-        return float(abs(np.median(np.diff(self.v_kms))) / 2.355)
+        return float(abs(np.median(np.diff(self.v_kms))) / 2.355) # FWHM -> sigma
 
     def minimum_baseline_m(
         self,
         max_angular_scale_arcsec: float,
         *,
-        scale_factor: float = 0.6, # 経験的な値：https://almascience.nrao.edu/about-alma/alma-basics
+        scale_factor: float = 0.6,  # 経験的な値：https://almascience.nrao.edu/about-alma/alma-basics
     ) -> np.ndarray:
-        """天体より明らかに大きいスケールの構造に対応するbaselineをフラグするための最小baseline [m] を返す。"""
+        """天体より明らかに大きいスケールを除くための最小baseline [m]を返す。"""
         if max_angular_scale_arcsec <= 0:
             raise ValueError("max_angular_scale_arcsec must be > 0.")
         if scale_factor <= 0:
             raise ValueError("scale_factor must be > 0.")
         theta_rad = max_angular_scale_arcsec * ARCSEC2RAD
-        wavelength_m = cspeed.value / self.freqs_hz
-        return scale_factor * wavelength_m / theta_rad
+        wavelength_m = cspeed.value / self.freqs_hz  # (nchan,)
+        return scale_factor * wavelength_m / theta_rad  # (nchan,)
 
     def flags_with_max_angular_scale_cut(
         self,
@@ -64,13 +64,13 @@ class ProcessedUVData:
         *,
         scale_factor: float = 0.6,
     ) -> np.ndarray:
-        """天体より明らかに大きいスケールの構造に対応するbaselineをフラグする。"""
-        minimum_baseline_m = self.minimum_baseline_m(
+        """天体より明らかに大きいスケールに対応するvisibilityをフラグする。"""
+        minimum_baseline_m = self.minimum_baseline_m(  # (nchan,)
             max_angular_scale_arcsec,
             scale_factor=scale_factor,
         )
-        uv_radius_m = np.hypot(self.uvw_m[0], self.uvw_m[1])
-        return self.flag | (uv_radius_m[None, :] < minimum_baseline_m[:, None])
+        uv_radius_m = np.hypot(self.uvw_m[0], self.uvw_m[1])  # (nrow,)
+        return self.flag | (uv_radius_m[None, :] < minimum_baseline_m[:, None])  # (nchan, nrow)
 
 
 def load_processed_uv(path: str | PathLike[str]) -> ProcessedUVData:
@@ -336,73 +336,96 @@ def primary_beam(xx_as, yy_as, pb_fwhm_as):
 
 
 def image_to_vis_finufft_type2(
-    I,                 # 2D image [Jy/pix]
-    ps_arcsec,        # pixel size [arcsec]
-    u, v,              # 1D arrays [wavelengths]
-    *,
-    eps=1e-6           # NUFFT精度
-):
-    """
-    画像 I(x,y) から 非等間隔(u,v)の視線データ V(u,v) を計算する（FFT + NUFFT type-2）
-    ****画像の中心がphase centerに対応していることが前提****
-
-    Parameters
-    ----------
-    I_img : 2D array
-        Input image [Jy/pix] ** NOT BRIGHTNESS ** : PB correction済みとする
-    ps_arcsec : float
-        Pixel size [arcsec]
-    u : 1D array
-        U coordinates [wavelengths]
-    v : 1D array
-        V coordinates [wavelengths]
-    eps : float, optional
-        NUFFT precision
-    """
-
-    # --- Uniform FFT ---
-    I0 = np.fft.ifftshift(I) # 画像は中心が(0,0)想定なので、FFT前に ifftshift
-    Fk = np.fft.fft2(I0) / I0.size  # 2D FFT (uniform grid)
-    Fk = np.fft.fftshift(Fk) # 戻す
-
-    # exp(-2π i (u l + v m))に合わせて補間
-    xj = (2.0*np.pi) * u # * np.deg2rad(ps_arcsec/3600) 
-    yj = (2.0*np.pi) * v # * np.deg2rad(ps_arcsec/3600) 
-
-    # --- FINUFFT（type-2）---
-    V = nufft2d2(xj, yj, Fk, isign=-1, eps=eps)  # V(0,0) = sum I(x,y) になるように正規化
-
-    return V
-
-
-def image_to_vis_finufft_type3(
-    I,                # 2D image: [Jy/pix] 
-    xx_as, yy_as,     # 2D grids [arcsec]（位相中心=0）
-    kx, ky,           # 1D arrays [wavelengths]
+    I,                 # 2D image [Jy/pixel]
+    ps_arcsec,         # pixel size [arcsec]
+    u, v,              # 1D CASA/MS uv coordinates [wavelengths]
     *,
     eps=1e-6
 ):
-    """
-    画像 I(x,y) から 非等間隔(u,v)の視線データ V(u,v) を計算する（NUFFT type-3）
-    ****位相中心はxx_as, yy_asに依存するので、fftshiftは不要****
+    """Compute image visibilities on a uniform grid with a type-2 NUFFT (uniform grid to non-uniform grid; much faster than type-3).
+
+    The general type-2 NUFFT used here is
+        f_k = sum_j c_j exp[i (s_k x_j + t_k y_j)]
+    
+    The interferometric measurement equation (CASA convention) is
+        V(u,v) = integral I(l,m) exp[+2 pi i (u l + v m)] dl dm
+
+    For the grid made by ``make_grid_arcsec`` (``x=-l``, ``y=m``), set
+    ``x=-2 pi u dx`` and ``y=+2 pi v dy``. The image center must be the
+    phase center. Unlike type-3, this function requires a uniform grid.
+
     Parameters
     ----------
     I : 2D array
-        Input image [Jy/pix] or [Jy/sr] ** NOT BRIGHTNESS ** : PB correction済みとする
-    xx_as, yy_as : 2D arrays
-        Image plane coordinates [arcsec] (phase center = 0)
+        Flux per pixel [Jy/pixel]. No normalization is applied.
+    ps_arcsec : float
+        Pixel size [arcsec]
+    u, v : 1D arrays
+        CASA/MS coordinates [wavelengths].
     eps : float, optional
-        NUFFT precision
+        NUFFT accuracy.
+
+    Returns
+    -------
+    V : 1D complex array
+        Complex visibilities.
+    """
+    ps_rad = ps_arcsec * ARCSEC2RAD
+    x = -2.0 * np.pi * np.asarray(u, dtype=np.float64) * ps_rad
+    y = +2.0 * np.pi * np.asarray(v, dtype=np.float64) * ps_rad
+
+    # FINUFFT's first mode axis corresponds to x, hence I.T for image[y, x].
+    coefficients = np.asarray(I.T, dtype=np.complex128, order="C")
+    return nufft2d2(x=x, y=y, f=coefficients, isign=+1, eps=eps)
+
+
+def image_to_vis_finufft_type3(
+    I,                # 2D image [Jy/pixel]
+    xx_as, yy_as,     # 2D image-plane grids [arcsec] (phase center = 0)
+    u, v,             # 1D CASA/MS uv coordinates [wavelengths]
+    *,
+    eps=1e-6
+):
+    """Compute image visibilities with a type-3 NUFFT (much slower but more general than type-2).
+
+    The general type-3 NUFFT used here is
+        f_k = sum_j c_j exp[i (s_k x_j + t_k y_j)]
+
+    The interferometric measurement equation (CASA convention) is
+        V(u,v) = integral I(l,m) exp[+2 pi i (u l + v m)] dl dm
+
+    Since make_grid_arcsec() in lensing.py defines ``x=-l`` and ``y=m``,
+    this gives ``s=kx=-2 pi u`` and ``t=ky=+2 pi v``.
+    Because the pixel coordinates are supplied explicitly, no ``fftshift`` is needed, and the grid may be nonuniform.
+
+    This helper is intended for simple or one-off calculations.
+    Repeated evaluations during sampling use a precomputed FINUFFT plan instead.
+
+    Parameters
+    ----------
+    I : 2D array
+        Flux per pixel [Jy/pixel]. No normalization is applied.
+    xx_as, yy_as : 2D arrays
+        Image coordinates [arcsec], with the phase center at zero.
+    u, v : 1D arrays
+        CASA/MS coordinates [wavelengths].
+    eps : float, optional
+        NUFFT accuracy.
+
+    Returns
+    -------
+    V : 1D complex array
+        Complex visibilities.
     """
 
-    # xj = (xx_as * ARCSEC2RAD).ravel()  # [rad] --> 外側で1回だけ実行
-    # yj = (yy_as * ARCSEC2RAD).ravel()  # [rad]
-    cj = I.ravel().astype(np.complex64) 
+    xx_rad = (xx_as * ARCSEC2RAD).ravel()
+    yy_rad = (yy_as * ARCSEC2RAD).ravel()  # [rad]
+    cj = I.ravel().astype(np.complex128)
 
-    # kx = 2.0 * np.pi * u
-    # ky = -2.0 * np.pi * v # なぜかここ反転させるとあう
+    kx = -2.0 * np.pi * u
+    ky = +2.0 * np.pi * v
     
-    V = nufft2d3(x=xx_as, y=yy_as, c=cj, s=kx, t=ky, isign=+1, eps=eps)
+    V = nufft2d3(x=xx_rad, y=yy_rad, c=cj, s=kx, t=ky, isign=+1, eps=eps)
     return V
 
 
@@ -444,6 +467,7 @@ def vis_to_image_finufft_type3(
     eps = 1e-6
 ):
     """
+    まず、事実として、CASA MSのuv座標は東向きが正、北向きが正である。
     Non-uniform V(u,v) --> I(x,y) （NUFFT type-3）
     I(l,m) = Re[ Σ w_i V_i exp(+2πi (u_i l + v_i m)) ] / Σ w_i
     ****位相中心はxx_as, yy_asに依存するので、fftshiftは不要****
@@ -464,7 +488,7 @@ def vis_to_image_finufft_type3(
     """
 
     kx = -(2.0 * np.pi * u).astype(np.float32, order="C")
-    ky =  (2.0 * np.pi * v).astype(np.float32, order="C")
+    ky = +(2.0 * np.pi * v).astype(np.float32, order="C")
     cj = (V * V_weight).astype(np.complex64, order="C")  # [Jy]
     # cj = V.astype(np.complex128)  # [Jy] # uniform weighting
 
