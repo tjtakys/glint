@@ -6,7 +6,7 @@ from scipy.special import erf
 ###################
 # 2D model
 ###################
-def sersic2d(x, y, I, x0, y0, ellip, pa, r_eff, n):
+def sersic2d(x, y, I, x0, y0, ellip, pa_rad, r_eff, n):
     """
     Sérsic 2D surface brightness (astropy.modeling.models.Sersic2D but c=0 fixed)
 
@@ -41,7 +41,7 @@ def sersic2d(x, y, I, x0, y0, ellip, pa, r_eff, n):
     bn = 2*n - 1/3 + 4/(405*n) + 46/(25515*n**2) + 131/(1148175*n**3) - 2194697/(30690717750*n**4)
 
     # 回転
-    ct, st = np.cos(pa), np.sin(pa)
+    ct, st = np.cos(pa_rad), np.sin(pa_rad)
     dx = x - x0
     dy = y - y0
     x_maj =  ct*dx + st*dy
