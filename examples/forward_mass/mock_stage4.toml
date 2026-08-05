@@ -4,6 +4,7 @@
 # Zero uses every unflagged visibility. A positive value deterministically
 # limits each channel for quick tests.
 max_visibilities_per_channel = 0
+nufft_type = 2
 finufft_tolerance = 1.0e-6
 # CASA weightの相対比を使い、絶対スケールだけline-free dataで較正する。
 noise_sigma_source = "scaled_exported"
