@@ -18,6 +18,7 @@ max_angular_scale_arcsec = 4.0
 # Zero uses every unflagged visibility; positive values are deterministic
 # per-channel limits for a quick end-to-end test.
 max_visibilities_per_channel = 0
+nufft_type = 2
 finufft_tolerance = 1.0e-6
 
 [target]
