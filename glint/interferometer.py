@@ -343,23 +343,24 @@ def image_to_vis_finufft_type2(
     eps=1e-6
 ):
     """Compute image visibilities on a uniform grid with a type-2 NUFFT (uniform grid to non-uniform grid; much faster than type-3).
-
-    The general type-2 NUFFT used here is
-        f_k = sum_j c_j exp[i (s_k x_j + t_k y_j)]
+    https://finufft.readthedocs.io/en/latest/math.html
     
-    The interferometric measurement equation (CASA convention) is
+    The general type-2 NUFFT used here is
+        c_j = sum_k f_k exp[i (s_k x_j + t_k y_j)]  (c_j: NU, f_k: U)
+    
+    The interferometric measurement equation (from ALMA technical handbook) is
         V(u,v) = integral I(l,m) exp[+2 pi i (u l + v m)] dl dm
 
     For the grid made by ``make_grid_arcsec`` (``x=-l``, ``y=m``), set
     ``x=-2 pi u dx`` and ``y=+2 pi v dy``. The image center must be the
-    phase center. Unlike type-3, this function requires a uniform grid.
+    phase center.
 
     Parameters
     ----------
     I : 2D array
         Flux per pixel [Jy/pixel]. No normalization is applied.
     ps_arcsec : float
-        Pixel size [arcsec]
+        Pixel size [arcsec] for scaling the NUFFT coordinates.
     u, v : 1D arrays
         CASA/MS coordinates [wavelengths].
     eps : float, optional
@@ -391,7 +392,7 @@ def image_to_vis_finufft_type3(
     The general type-3 NUFFT used here is
         f_k = sum_j c_j exp[i (s_k x_j + t_k y_j)]
 
-    The interferometric measurement equation (CASA convention) is
+    The interferometric measurement equation (from ALMA technical handbook) is
         V(u,v) = integral I(l,m) exp[+2 pi i (u l + v m)] dl dm
 
     Since make_grid_arcsec() in lensing.py defines ``x=-l`` and ``y=m``,
