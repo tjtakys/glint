@@ -4,7 +4,7 @@ from os import PathLike
 import numpy as np
 from astropy.constants import c as cspeed
 # import numba as nb
-from finufft import nufft2d2, nufft2d3
+from finufft import nufft2d1, nufft2d2, nufft2d3
 
 ARCSEC2RAD = np.deg2rad(1/3600)
 
@@ -336,12 +336,13 @@ def primary_beam(xx_as, yy_as, pb_fwhm_as):
 
 
 def image_to_vis_finufft_type2(
-    I,                 # 2D image [Jy/pixel]
-    ps_arcsec,         # pixel size [arcsec]
-    u, v,              # 1D CASA/MS uv coordinates [wavelengths]
+    I: np.ndarray,                 # 2D image [Jy/pixel]
+    ps_arcsec: float,              # pixel size [arcsec]
+    u: np.ndarray,                 # 1D CASA/MS u coordinates [wavelengths]
+    v: np.ndarray,                 # 1D CASA/MS v coordinates [wavelengths]
     *,
-    eps=1e-6
-):
+    eps: float = 1e-6,
+) -> np.ndarray:
     """Compute image visibilities on a uniform grid with a type-2 NUFFT (uniform grid to non-uniform grid; much faster than type-3).
     https://finufft.readthedocs.io/en/latest/math.html
     
@@ -381,12 +382,14 @@ def image_to_vis_finufft_type2(
 
 
 def image_to_vis_finufft_type3(
-    I,                # 2D image [Jy/pixel]
-    xx_as, yy_as,     # 2D image-plane grids [arcsec] (phase center = 0)
-    u, v,             # 1D CASA/MS uv coordinates [wavelengths]
+    I: np.ndarray,                # 2D image [Jy/pixel]
+    xx_as: np.ndarray,            # 2D image-plane x grid [arcsec]
+    yy_as: np.ndarray,            # 2D image-plane y grid [arcsec]
+    u: np.ndarray,                # 1D CASA/MS u coordinates [wavelengths]
+    v: np.ndarray,                # 1D CASA/MS v coordinates [wavelengths]
     *,
-    eps=1e-6
-):
+    eps: float = 1e-6,
+) -> np.ndarray:
     """Compute image visibilities with a type-3 NUFFT (much slower but more general than type-2).
 
     The general type-3 NUFFT used here is
@@ -459,51 +462,142 @@ def image_to_vis_finufft_type3(
 
 
 
-# imaging to make a dirty map
-def vis_to_image_finufft_type3(
-    u, v,           # 1D arrays [wavelengths] ALREADY FLAGGED!!
-    V,              # 1D array [Jy]
-    V_weight,       # 1D array [weights]
-    xx_as, yy_as,   # 2D grids [arcsec]（位相中心=0）
-    eps = 1e-6
-):
-    """
-    まず、事実として、CASA MSのuv座標は東向きが正、北向きが正である。
-    Non-uniform V(u,v) --> I(x,y) （NUFFT type-3）
-    I(l,m) = Re[ Σ w_i V_i exp(+2πi (u_i l + v_i m)) ] / Σ w_i
-    ****位相中心はxx_as, yy_asに依存するので、fftshiftは不要****
-    CASA MSに入っているuは東向きが正。従って出力される画像も右向きが正になる。
+def vis_to_image_finufft_type1(
+    u: np.ndarray,
+    v: np.ndarray,
+    V: np.ndarray,
+    V_weight: np.ndarray,
+    image_shape: tuple[int, int],
+    ps_arcsec: float,
+    *,
+    eps: float = 1e-6,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Make a dirty image on a uniform grid with a type-1 NUFFT.
+
+    Type-1 evaluates
+        ``f_k = sum_j c_j exp[-i (s_k x_j + t_k y_j)]``.
+
+    The interferometric inverse transform is
+        ``I(l,m) = Re[sum_j w_j V_j exp[-2 pi i (u_j l + v_j m)]] / sum_j w_j``.
 
     Parameters
     ----------
-    u, v : 1D array
-        U, V coordinates [wavelengths]
-    V : 1D array
-        Visibilities [Jy]
+    u, v : 1D arrays
+        CASA/MS coordinates [wavelengths].
+    V : 1D complex array
+        Visibilities [Jy].
     V_weight : 1D array
-        Weights
-    xx_as, yy_as : 2D arrays
-        Image plane coordinates [arcsec] (phase center = 0)
+        Visibility weights.
+    image_shape : tuple
+        Output image shape ``(ny, nx)``.
+    ps_arcsec : float
+        Pixel size [arcsec].
     eps : float, optional
-        NUFFT precision
+        NUFFT accuracy.
+
+    Returns
+    -------
+    image, beam : 2D arrays
+        Real dirty image and dirty beam, normalized by ``sum(V_weight)``.
     """
+    u = np.asarray(u, dtype=np.float64)
+    v = np.asarray(v, dtype=np.float64)
+    visibility = np.asarray(V, dtype=np.complex128)
+    weight = np.asarray(V_weight, dtype=np.float64)
+    if not (u.shape == v.shape == visibility.shape == weight.shape):
+        raise ValueError("u, v, V, and V_weight must have the same shape.")
+    if len(image_shape) != 2 or min(image_shape) <= 0:
+        raise ValueError("image_shape must be (ny, nx) with positive sizes.")
+    if ps_arcsec <= 0:
+        raise ValueError("ps_arcsec must be > 0.")
 
-    kx = -(2.0 * np.pi * u).astype(np.float32, order="C")
-    ky = +(2.0 * np.pi * v).astype(np.float32, order="C")
-    cj = (V * V_weight).astype(np.complex64, order="C")  # [Jy]
-    # cj = V.astype(np.complex128)  # [Jy] # uniform weighting
+    ny, nx = (int(value) for value in image_shape)
+    if nx % 2 or ny % 2:
+        raise ValueError(
+            "type-1 imaging requires even image dimensions for the "
+            "make_grid_arcsec center convention."
+        )
+    weight_sum = np.sum(weight)
+    if not np.isfinite(weight_sum) or weight_sum <= 0:
+        raise ValueError("V_weight must have a positive finite sum.")
 
-    xj = (xx_as * ARCSEC2RAD).ravel().astype(np.float32, order="C")  # [rad]
-    yj = (yy_as * ARCSEC2RAD).ravel().astype(np.float32, order="C")  # [rad]
+    ps_rad = ps_arcsec * ARCSEC2RAD
+    x = -2.0 * np.pi * u * ps_rad
+    y = +2.0 * np.pi * v * ps_rad
+    modes = (nx, ny)  # FINUFFT axes are (x, y); NumPy images are [y, x].
 
-    I = nufft2d3(x=kx, y=ky, c=cj, s=xj, t=yj, isign=+1, eps=eps).reshape(xx_as.shape)
-    I /= np.sum(V_weight) # この規格化はbeamで規格化しているのと同じ
+    image_xy = nufft2d1(
+        x=x, y=y, c=visibility * weight, n_modes=modes,
+        isign=-1, eps=eps,
+    )
+    beam_xy = nufft2d1(
+        x=x, y=y, c=weight.astype(np.complex128), n_modes=modes,
+        isign=-1, eps=eps,
+    )
+    return (image_xy.T / weight_sum).real, (beam_xy.T / weight_sum).real
 
-    # beamも作成する
-    # ビームの計算はIと同じだが、cjをV_weightにする
-    cj_beam = V_weight.astype(np.complex64, order="C")
-    beam = nufft2d3(x=kx, y=ky, c=cj_beam, s=xj, t=yj, isign=+1, eps=eps).reshape(xx_as.shape)
-    beam /= np.sum(V_weight)
 
-    return I.real, beam.real 
-    # return I.real[:, ::-1], beam.real # x軸反転
+def vis_to_image_finufft_type3(
+    u: np.ndarray,
+    v: np.ndarray,
+    V: np.ndarray,
+    V_weight: np.ndarray,
+    xx_as: np.ndarray,
+    yy_as: np.ndarray,
+    *,
+    eps: float = 1e-6,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Make a dirty image on explicit coordinates with a type-3 NUFFT.
+
+    Type-3 evaluates
+        ``f_k = sum_j c_j exp[-i (s_k x_j + t_k y_j)]``.
+
+    The interferometric inverse transform is
+        ``I(l,m) = Re[sum_j w_j V_j exp[-2 pi i (u_j l + v_j m)]] / sum_j w_j``.
+
+    Parameters
+    ----------
+    u, v : 1D arrays
+        CASA/MS coordinates [wavelengths].
+    V : 1D complex array
+        Visibilities [Jy].
+    V_weight : 1D array
+        Visibility weights.
+    xx_as, yy_as : 2D arrays
+        Image coordinates [arcsec], with the phase center at zero.
+    eps : float, optional
+        NUFFT accuracy.
+
+    Returns
+    -------
+    image, beam : 2D arrays
+        Real dirty image and dirty beam, normalized by ``sum(V_weight)``.
+    """
+    u = np.asarray(u, dtype=np.float64)
+    v = np.asarray(v, dtype=np.float64)
+    visibility = np.asarray(V, dtype=np.complex128)
+    weight = np.asarray(V_weight, dtype=np.float64)
+    xx_as = np.asarray(xx_as, dtype=np.float64)
+    yy_as = np.asarray(yy_as, dtype=np.float64)
+    if not (u.shape == v.shape == visibility.shape == weight.shape):
+        raise ValueError("u, v, V, and V_weight must have the same shape.")
+    if xx_as.shape != yy_as.shape or xx_as.ndim != 2:
+        raise ValueError("xx_as and yy_as must be 2D arrays with the same shape.")
+    weight_sum = np.sum(weight)
+    if not np.isfinite(weight_sum) or weight_sum <= 0:
+        raise ValueError("V_weight must have a positive finite sum.")
+
+    kx = -2.0 * np.pi * u
+    ky = +2.0 * np.pi * v
+    x = (xx_as * ARCSEC2RAD).ravel()
+    y = (yy_as * ARCSEC2RAD).ravel()
+
+    image = nufft2d3(
+        x=kx, y=ky, c=visibility * weight, s=x, t=y,
+        isign=-1, eps=eps,
+    ).reshape(xx_as.shape)
+    beam = nufft2d3(
+        x=kx, y=ky, c=weight.astype(np.complex128), s=x, t=y,
+        isign=-1, eps=eps,
+    ).reshape(xx_as.shape)
+    return (image / weight_sum).real, (beam / weight_sum).real
