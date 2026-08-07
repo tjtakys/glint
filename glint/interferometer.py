@@ -376,9 +376,10 @@ def image_to_vis_finufft_type2(
     x = -2.0 * np.pi * np.asarray(u, dtype=np.float64) * ps_rad
     y = +2.0 * np.pi * np.asarray(v, dtype=np.float64) * ps_rad
 
-    # FINUFFT's first mode axis corresponds to x, hence I.T for image[y, x].
-    coefficients = np.asarray(I.T, dtype=np.complex128, order="C")
-    return nufft2d2(x=x, y=y, f=coefficients, isign=+1, eps=eps)
+    # 画像は I = I[y, x] だが、FINUFFTは nufft2d2(x, y) の入力順であることに注意
+    # I.T を渡しても良いが、転置のための余分なメモリコピーが発生する（ただし画像のfloat --> complexの変換のためにいずれにせよメモリコピーは必要でそこまで早くはならないが。実測すると FT 全体の1%程度）
+    coefficients = np.asarray(I, dtype=np.complex128, order="C")
+    return nufft2d2(x=y, y=x, f=coefficients, isign=+1, eps=eps)
 
 
 def image_to_vis_finufft_type3(
@@ -524,7 +525,7 @@ def vis_to_image_finufft_type1(
     ps_rad = ps_arcsec * ARCSEC2RAD
     x = -2.0 * np.pi * u * ps_rad
     y = +2.0 * np.pi * v * ps_rad
-    modes = (nx, ny)  # FINUFFT axes are (x, y); NumPy images are [y, x].
+    modes = (nx, ny)  # 画像は I = I[y, x] だが、FINUFFTは (x, y) の順であることに注意
 
     image_xy = nufft2d1(
         x=x, y=y, c=visibility * weight, n_modes=modes,
