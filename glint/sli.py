@@ -42,8 +42,10 @@ def build_matrix_lensing(
     Nsrc = ny_src * nx_src
 
     # Source center pixel indices
-    x0_src_pix = (nx_src - 1) / 2.0
-    y0_src_pix = (ny_src - 1) / 2.0
+    # x0_src_pix = (nx_src - 1) / 2.0
+    # y0_src_pix = (ny_src - 1) / 2.0
+    x0_src_pix = nx_src / 2.0
+    y0_src_pix = ny_src / 2.0
 
     # maskされた image pixel だけ取り出す
     mask_flat = mask.ravel()
@@ -97,7 +99,7 @@ def build_matrix_lensing(
 
     # csr_matrix 用に、(row, col, data) を全部並べる
     # 各行最大4要素なので、長さは 4*Nvalid
-    # row_idx = np.repeat(rows, 4)  # [r,r,r,r, r,r,r,r, ...]
+    # row_idx = np.repeat(rows, 4)  # [r,r,r,r, r,r,r,r, ...] 
     row_idx = np.concatenate([rows, rows, rows, rows])
     col_idx = np.concatenate([col00, col10, col01, col11])
     data    = np.concatenate([w00,  w10,  w01,  w11]).astype(np.float64)
