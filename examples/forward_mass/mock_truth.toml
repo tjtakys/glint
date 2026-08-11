@@ -29,6 +29,10 @@ spectral_resolution_sigma_kms = 25.0
 radius_max_kpc = 5
 radial_step_arcsec = 0.01
 
+[pressure_support]
+# "constant_scale_height" or "self_gravitating_hydrostatic"
+vertical_model = "self_gravitating_hydrostatic"
+
 [truth.mass]
 total_baryonic_mass_msun = 1.0e11
 disk_scale_radius_kpc = 1.0

@@ -1,11 +1,11 @@
 {
-  "achieved_peak_sn": 19.999977111816406,
+  "achieved_peak_sn": 20.00000762939453,
   "averaged_visibility_rows": 6132,
-  "flux_scale": 0.4016002565622334,
-  "inbright_jy_per_pixel": 8.118709050218953e-05,
+  "flux_scale": 0.4022254198789592,
+  "inbright_jy_per_pixel": 8.130694660610846e-05,
   "input_visibility_rows": 325080,
   "max_uv_distance_m": 12.0,
-  "pilot_peak_sn": 47.45022201538086,
-  "solved_peak_sn": 20.0,
+  "pilot_peak_sn": 47.402652740478516,
+  "solved_peak_sn": 19.999998092651367,
   "target_peak_sn": 20.0
 }

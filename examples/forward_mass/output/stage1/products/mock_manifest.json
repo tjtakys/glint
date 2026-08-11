@@ -1,9 +1,9 @@
 {
   "cases": [
     {
-      "intrinsic_sha256": "4051a497dd716532ebd246d95364215cec67d6a8972668428cf13d993a411d5e",
+      "intrinsic_sha256": "bd6c4fefc0156bff2c2bb494a1d5e6827e087977c30fe126317326aba1c78930",
       "intrinsic_source_cube": "bt10_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "ab13999692e9b0ae369084a3d05b1d1d3c30377a0083ebf27db22041edbbbc63",
+      "lensed_sha256": "23ce7c1b524651c3c1ba3df540f823c2caf1015f72d741616e65293422e87351",
       "lensed_sky_cube": "bt10_re03/lensed_sky_cube.fits",
       "name": "bt10_re03",
       "parameters": {
@@ -32,9 +32,9 @@
       }
     },
     {
-      "intrinsic_sha256": "55cd84f86b847a28c2c8bdb9219eb7e177c792ca47da2c1e22d3294f11d594c5",
+      "intrinsic_sha256": "2b2c4a514b7c14e8f41755ee667e6cdd35d1625f0d6758c8d243cf7e3afa1084",
       "intrinsic_source_cube": "bt10_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "d01926815b9821e565d303bc6db30e7bcde7a2499cdbbbbc2c8555e6d9ad06ad",
+      "lensed_sha256": "cbd62819c42cb0a282329d761e6ff8c7909a4a24f5982a102e67b5fc42626e2e",
       "lensed_sky_cube": "bt10_re06/lensed_sky_cube.fits",
       "name": "bt10_re06",
       "parameters": {
@@ -63,9 +63,9 @@
       }
     },
     {
-      "intrinsic_sha256": "33eb954aca048d2dffde80ae5cea334bee37577bc9049496079aa2ff72cf1918",
+      "intrinsic_sha256": "0a7eefc7a281a3b4e8ca2125822f9907f842c5f6216d2686f838f3d324254be2",
       "intrinsic_source_cube": "bt25_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "a119dc7963130fa4cba36e3e108822fce68dfb4366d78e1f0df1f40098de4bc3",
+      "lensed_sha256": "6dab75da3e09d153c5b6a2ad607ff2f5e2efa596fd38d1c4960ff7ac05039972",
       "lensed_sky_cube": "bt25_re03/lensed_sky_cube.fits",
       "name": "bt25_re03",
       "parameters": {
@@ -94,9 +94,9 @@
       }
     },
     {
-      "intrinsic_sha256": "24725f13f0972d2a7ec3880a3d32d818445d6b153405c1cc13ecd6e2ee0f2b6c",
+      "intrinsic_sha256": "ae557cd2679cf6f5fdf05d96f768242eb67030c3a3d6cb11867c17d18a6659a2",
       "intrinsic_source_cube": "bt25_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "70262d0ac771437247384feecb446aadce87d73dc0d74aa98468a3d46d0a7fd3",
+      "lensed_sha256": "c0fa4f13772db096a68982aefd4fb80585b4d0a167148d8d221deec6813f989b",
       "lensed_sky_cube": "bt25_re06/lensed_sky_cube.fits",
       "name": "bt25_re06",
       "parameters": {
@@ -125,9 +125,9 @@
       }
     },
     {
-      "intrinsic_sha256": "01e7cd8d15354266f02e68afd0a65fa03c6a9798702d43f2c82bd483b2fc2932",
+      "intrinsic_sha256": "2d80081bd525ec001f8ab632018b3bcf0759d274559a7459140669349402200b",
       "intrinsic_source_cube": "bt50_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "71cd7cdf8d73593ba5337c9670cf68695ddf17c5861cf390d4d58f0ea4c8bc12",
+      "lensed_sha256": "8c697b66b659a903e80d030f615905f45e416ef5a359934f0dc4d04eb5c7c125",
       "lensed_sky_cube": "bt50_re03/lensed_sky_cube.fits",
       "name": "bt50_re03",
       "parameters": {
@@ -156,9 +156,9 @@
       }
     },
     {
-      "intrinsic_sha256": "ae3e3ff0806e16bdb6b8c90ae2c40dcae6d6a23db318ed7626af3f2ff0b1d808",
+      "intrinsic_sha256": "5acd387b02aad7ce6919a6dd59b5ba6ecc59617d99ecdc3b09b18fce2d026089",
       "intrinsic_source_cube": "bt50_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "e80abc4a95c7bd0f780451391a665c378b305133e4d8dba0c68aaa5c283c926c",
+      "lensed_sha256": "a96ff79b1ed183be4621399f8531e3e6e724552d68d065cf91236e9dd3e1c5ca",
       "lensed_sky_cube": "bt50_re06/lensed_sky_cube.fits",
       "name": "bt50_re06",
       "parameters": {
@@ -187,9 +187,9 @@
       }
     },
     {
-      "intrinsic_sha256": "3f29596d31ac026d3e616750c93b69f4678aac20fbc25985ca894b2a5bc7cf1a",
+      "intrinsic_sha256": "a9943d70292a1b595102a746c3360e5699469c7918743b43d9aa40181eb63e7d",
       "intrinsic_source_cube": "bt00/intrinsic_source_cube.fits",
-      "lensed_sha256": "c34cb3b0966df30cce88d3b43ebaa643bae1a3a63a9eee21ed01c5dc61d8c575",
+      "lensed_sha256": "c9fdcd649a40383d349deb847754c7c4b1b4df279149cf6ea355c6a0edad1620",
       "lensed_sky_cube": "bt00/lensed_sky_cube.fits",
       "name": "bt00",
       "parameters": {
@@ -224,7 +224,10 @@
     "x_center_arcsec": 0.0,
     "y_center_arcsec": 0.0
   },
-  "schema_version": 1,
+  "pressure_support": {
+    "vertical_model": "self_gravitating_hydrostatic"
+  },
+  "schema_version": 2,
   "source_grid": {
     "grid_size": 100,
     "pixel_size_arcsec": 0.01,
