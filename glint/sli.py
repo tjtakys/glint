@@ -121,8 +121,10 @@ def mask_source_supported_pixels(
     Keep only image pixels whose 4-neighbor bilinear stencil is fully inside source grid.
     """
     ny_src, nx_src = ctx.xx_src.shape
-    x0_src_pix = (nx_src - 1) / 2.0
-    y0_src_pix = (ny_src - 1) / 2.0
+    # x0_src_pix = (nx_src - 1) / 2.0
+    # y0_src_pix = (ny_src - 1) / 2.0
+    x0_src_pix = nx_src / 2.0
+    y0_src_pix = ny_src / 2.0
 
     bx_pix = (beta_x_arcsec - ctx.x0_src) / ctx.pixsize_src + x0_src_pix
     by_pix = (beta_y_arcsec - ctx.y0_src) / ctx.pixsize_src + y0_src_pix
