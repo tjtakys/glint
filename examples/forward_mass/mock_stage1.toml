@@ -1,6 +1,10 @@
 # Fit settings used only by the final noiseless lensed-cube recovery check.
 # Add or remove any supported mass, source, or lens parameter below.
 
+[pressure_support]
+# "constant_scale_height" or "self_gravitating_hydrostatic"
+vertical_model = "self_gravitating_hydrostatic"
+
 [recovery]
 max_workers = 7
 free_parameters = [
