@@ -19,7 +19,7 @@ def pressure_supported_rotation_velocity(
     surface_density_scale_radius: float,
     velocity_dispersion_scale_radius: float | None = None,
     *,
-    vertical_model: VerticalModel = "constant_scale_height",
+    vertical_model: VerticalModel = "self_gravitating_hydrostatic",
 ) -> np.ndarray:
     """指数関数profileにpressure supportを適用した回転速度を計算。
     圧力項は、sigma_R^2 * d ln(rho_R sigma_R^2) / d ln(R)
