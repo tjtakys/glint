@@ -51,7 +51,6 @@ class ModelParameters(NamedTuple):
     名前またはindexでアクセスできる Forward modelで使用する全パラメータ
     ALL_PARAMETER_NAMESの順序で保持する（ndarrayに変換してサンプラーに渡すので順番変えるのはNG）
     サンプリング中にインスタンス生成するが、時間はほぼ無視できる（<<0.1%）
-    初期設定時にだけ呼ばれ、サンプリング中には新たに作ったりしない
     """
     # mass parameters
     log10_m_baryon: float
@@ -181,10 +180,11 @@ class ParameterLayout:
         return ModelParameters(*values.tolist())
 
     def encode(self, parameters: ModelParameters) -> np.ndarray:
+        # その逆
         return parameters.as_array()[self.free_indices]
 
     def prior_transform(self, unit_cube: np.ndarray) -> np.ndarray:
-        # Dynesty用のprior変換。log対応はまだ。
+        # Dynesty用のprior変換。log変換はパラメータの方で行い、ここは線形変換のみにしておく。
         unit_array = np.asarray(unit_cube, dtype=float)
         if unit_array.shape != (self.ndim,):
             raise ValueError(
