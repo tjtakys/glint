@@ -37,12 +37,6 @@ class ProcessedUVData:
         result = np.zeros_like(self.sigma, dtype=float)
         return np.divide(1.0, self.sigma, out=result, where=self.sigma > 0) # もしsigma<=0だと重み0
 
-    @property
-    def spec_res_sigma_kms(self) -> float:
-        if self.nchan < 2:
-            raise ValueError("At least two velocity channels are required to infer spectral resolution.")
-        return float(abs(np.median(np.diff(self.v_kms))) / 2.355) # FWHM -> sigma
-
     def minimum_baseline_m(
         self,
         max_angular_scale_arcsec: float,

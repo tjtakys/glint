@@ -46,7 +46,7 @@ class ImageContext:
     「毎回変わらないもの」だけ入れる：
       - grid (xx_img, yy_img, xx_src, yy_src)
       - pixelsize
-      - channel info（vchan, spec_res）
+      - channel info（vchan, raw correlator channel spacing）
       - lens center（x0_l, y0_l）
       - beam（image fitting で使うなら）
     """
@@ -79,7 +79,7 @@ class ImageContext:
     # ------------- 3D only -------------
     # spectral axis
     vchan_kms: Optional[np.ndarray] = None  # shape (nchan,)
-    spec_res_sgm_kms: Optional[float] = None  # channel width [km/s]
+    raw_channel_spacing_kms: Optional[float] = None  # online averaging前のraw channel spacing [km/s]
 
     # radial grid
     radius_arcsec: Optional[np.ndarray] = None  # shape (nr,)
@@ -128,11 +128,11 @@ class ImageContext:
             if not np.all(np.isfinite(self.radius_arcsec)):
                 raise ValueError("radius_arcsec contains NaN or inf.")
 
-        if self.spec_res_sgm_kms is not None and (
-            not np.isfinite(self.spec_res_sgm_kms)
-            or self.spec_res_sgm_kms < 0
+        if self.raw_channel_spacing_kms is not None and (
+            not np.isfinite(self.raw_channel_spacing_kms)
+            or self.raw_channel_spacing_kms < 0
         ):
-            raise ValueError("spec_res_sgm_kms must be finite and >= 0.")
+            raise ValueError("raw_channel_spacing_kms must be finite and >= 0.")
         for name in (
             "x0_src", "y0_src", "x0_l", "y0_l", "x_s", "y_s", "inc_deg"
         ):

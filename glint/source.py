@@ -74,7 +74,7 @@ def make_rotating_disk_cube(
     sigma_profile,          # (Nr,)      速度分散 σ_gas(R) [km/s]
     systemic_kms=0.0,       # ()         系統速度 V_sys [km/s]
     rmax_as=None,           # () or None 有効半径上限[arcsec]
-    spec_res_sgm_kms=0.0,       # ()     装置LSFのσ[km/s]（FWHMなら/2.355して渡す）
+    raw_channel_spacing_kms=0.0,  # ()   online averaging前のraw correlator channel spacing [km/s]
 ):
     """
     Parameters
@@ -97,8 +97,9 @@ def make_rotating_disk_cube(
         系統速度 [km/s]
     rmax_as : float or None
         有効半径上限 [arcsec] (Noneならradiusの最大値)
-    spec_res_sgm_kms : float
-        装置LSFのσ [km/s] (FWHMなら/2.355して渡す) Roman-Olivia+2023 Appendix 1 も参照。
+    raw_channel_spacing_kms : float
+        averaging前のraw correlator channel spacing [km/s]。
+        ALMAのHanning responseを想定
     """
     # 結果格納用の空キューブ
     ny, nx = XX.shape
@@ -133,8 +134,13 @@ def make_rotating_disk_cube(
     Vc  = np.interp(R, radius, vrot_profile).astype(np.float32)  # (nvalid,)
     Sig = np.interp(R, radius, sigma_profile).astype(np.float32)  # (nvalid,)
 
-    # LSFを分散に合成（ガウシアン仮定）
-    Sig_eff = np.sqrt(Sig**2 + spec_res_sgm_kms**2).astype(np.float32)  # (nvalid,)
+    if not np.isfinite(raw_channel_spacing_kms) or raw_channel_spacing_kms < 0:
+        raise ValueError("raw_channel_spacing_kms must be finite and >= 0.")
+
+    # ALMA correlatorのHanning kernel (0.25, 0.5, 0.25)を想定
+    # 最終channel幅による平均化は、以下のchannel境界間の積分に含まれているので加えなくてOK
+    hanning_variance_kms2 = 0.5 * raw_channel_spacing_kms**2
+    Sig_eff = np.sqrt(Sig**2 + hanning_variance_kms2).astype(np.float32)  # (nvalid,)
     # Sig_eff = np.maximum(Sig_eff, 10)
 
     # LOS velocity
