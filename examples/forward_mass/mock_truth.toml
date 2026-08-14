@@ -1,17 +1,26 @@
 # Common parameters used to generate the noiseless mock data in every stage.
+# Source- and image-plane coordinates use the same relative angular coordinate system.
 
 [target]
+# assuming G09.83808
 redshift = 6.024
 phase_center_ra_deg = 135.1909708333
 phase_center_dec_deg = 0.6897777778
 
+[line]
+# Rest-frame frequency of the target [CII] 158 um line.
+name = "[CII] 158um"
+rest_frequency_hz = 1.9005369e12
+
 [grid.image]
+# Assuming an observation with an angular resolution of ~0.1" --> pixel size of ~ 0.03"
 pixel_size_arcsec = 0.030
 grid_size = 200
 x_center_arcsec = 0.0
 y_center_arcsec = 0.0
 
 [grid.source]
+# Source- and image-plane coordinates share the same angular origin and axes.
 # Three times finer than the image grid for numerical source-plane sampling.
 pixel_size_arcsec = 0.010
 grid_size = 100
@@ -19,11 +28,12 @@ x_center_arcsec = 0.285
 y_center_arcsec = 0.030
 
 [spectral]
-rest_frequency_hz = 1.9005369e12
 velocity_min_kms = -400.0
 velocity_max_kms = 400.0
 channel_width_kms = 25.0
-spectral_resolution_sigma_kms = 25.0
+# ALMA FDMのonline averaging前のraw correlator channel spacing。
+# Hanningによる追加分散は、二次モーメント近似でraw_channel_spacing_kms^2 / 2となる。
+raw_channel_spacing_kms = 0.541
 
 [radial_profile]
 radius_max_kpc = 5

@@ -1,9 +1,9 @@
 {
   "cases": [
     {
-      "intrinsic_sha256": "bd6c4fefc0156bff2c2bb494a1d5e6827e087977c30fe126317326aba1c78930",
+      "intrinsic_sha256": "1b0aa7bfa98ea30d2f426f4d07fe21e7c7072670f49363c2be6fdd771b8b1850",
       "intrinsic_source_cube": "bt10_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "23ce7c1b524651c3c1ba3df540f823c2caf1015f72d741616e65293422e87351",
+      "lensed_sha256": "56d1672a5475e85cad5dfce50361135b0ff0092f78fc6b77d8aa3b495517338f",
       "lensed_sky_cube": "bt10_re03/lensed_sky_cube.fits",
       "name": "bt10_re03",
       "parameters": {
@@ -32,9 +32,9 @@
       }
     },
     {
-      "intrinsic_sha256": "2b2c4a514b7c14e8f41755ee667e6cdd35d1625f0d6758c8d243cf7e3afa1084",
+      "intrinsic_sha256": "3afccf8d27d60ce8de7c4d2b74fe352be0476e15a8b686d0325bcdbf9ae862a6",
       "intrinsic_source_cube": "bt10_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "cbd62819c42cb0a282329d761e6ff8c7909a4a24f5982a102e67b5fc42626e2e",
+      "lensed_sha256": "0f7675a985cc930863f5a8bdd67138f7e548ed0fd1ad68a77ee0be4dcbd119f7",
       "lensed_sky_cube": "bt10_re06/lensed_sky_cube.fits",
       "name": "bt10_re06",
       "parameters": {
@@ -63,9 +63,9 @@
       }
     },
     {
-      "intrinsic_sha256": "0a7eefc7a281a3b4e8ca2125822f9907f842c5f6216d2686f838f3d324254be2",
+      "intrinsic_sha256": "aa2cfd3efc0bce06802bb370017853205a4bf577ed3083114523955a132d1d43",
       "intrinsic_source_cube": "bt25_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "6dab75da3e09d153c5b6a2ad607ff2f5e2efa596fd38d1c4960ff7ac05039972",
+      "lensed_sha256": "9f43e8135f7387e7564f037e2e48778e7aaa58538463af2c1bab2362f54c474d",
       "lensed_sky_cube": "bt25_re03/lensed_sky_cube.fits",
       "name": "bt25_re03",
       "parameters": {
@@ -94,9 +94,9 @@
       }
     },
     {
-      "intrinsic_sha256": "ae557cd2679cf6f5fdf05d96f768242eb67030c3a3d6cb11867c17d18a6659a2",
+      "intrinsic_sha256": "83c8b16625bc9f3cb4545195ffce6a07a8a9aa28b65dcaf5f2dc08f0d462cfde",
       "intrinsic_source_cube": "bt25_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "c0fa4f13772db096a68982aefd4fb80585b4d0a167148d8d221deec6813f989b",
+      "lensed_sha256": "37f7f7aaf57d5f824ee84228370bedd7b77d0c2dae4874125b292f40ba8e3823",
       "lensed_sky_cube": "bt25_re06/lensed_sky_cube.fits",
       "name": "bt25_re06",
       "parameters": {
@@ -125,9 +125,9 @@
       }
     },
     {
-      "intrinsic_sha256": "2d80081bd525ec001f8ab632018b3bcf0759d274559a7459140669349402200b",
+      "intrinsic_sha256": "aca41ecb2312a805a1063c0e5d76262e97e5f18789be9991f6040b513072e265",
       "intrinsic_source_cube": "bt50_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "8c697b66b659a903e80d030f615905f45e416ef5a359934f0dc4d04eb5c7c125",
+      "lensed_sha256": "df2273b977505adc2015aacb68a8972e13a594d76f9760bef6f5cc389bd22763",
       "lensed_sky_cube": "bt50_re03/lensed_sky_cube.fits",
       "name": "bt50_re03",
       "parameters": {
@@ -156,9 +156,9 @@
       }
     },
     {
-      "intrinsic_sha256": "5acd387b02aad7ce6919a6dd59b5ba6ecc59617d99ecdc3b09b18fce2d026089",
+      "intrinsic_sha256": "46b23df5e20c61ebdcc3d4657a6fa1ce438104713bcff1f8261ebf6f6868824b",
       "intrinsic_source_cube": "bt50_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "a96ff79b1ed183be4621399f8531e3e6e724552d68d065cf91236e9dd3e1c5ca",
+      "lensed_sha256": "eec5e61d68dbd5f7902803f1d12abcdff49533bfcede75a75fa93ab67f22b376",
       "lensed_sky_cube": "bt50_re06/lensed_sky_cube.fits",
       "name": "bt50_re06",
       "parameters": {
@@ -187,9 +187,9 @@
       }
     },
     {
-      "intrinsic_sha256": "a9943d70292a1b595102a746c3360e5699469c7918743b43d9aa40181eb63e7d",
+      "intrinsic_sha256": "479442c6f9043918973debc704475e4e881cdee71e2680c720f9fe13f1567640",
       "intrinsic_source_cube": "bt00/intrinsic_source_cube.fits",
-      "lensed_sha256": "c9fdcd649a40383d349deb847754c7c4b1b4df279149cf6ea355c6a0edad1620",
+      "lensed_sha256": "39ea1b489aaa1540ffc9921160cdfaf5380f27dae59000e3ba94c54f49ca9e29",
       "lensed_sky_cube": "bt00/lensed_sky_cube.fits",
       "name": "bt00",
       "parameters": {
@@ -236,8 +236,7 @@
   },
   "spectral": {
     "channel_width_kms": 25.0,
-    "rest_frequency_hz": 1900536900000.0,
-    "spectral_resolution_sigma_kms": 25.0,
+    "raw_channel_spacing_kms": 0.541,
     "velocity_channels_kms": [
       -400.0,
       -375.0,
@@ -281,6 +280,6 @@
     "phase_center_ra_deg": 135.1909708333,
     "redshift": 6.024,
     "reference_frequency_hz": 270577576879.27106,
-    "rest_frequency_hz": 1900536900000.0
+    "rest_frequency_target_line_hz": 1900536900000.0
   }
 }
