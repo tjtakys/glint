@@ -1,5 +1,9 @@
 # Stage 4 settings. Mock truth and the Stage 3-1 ALMA products are reused.
 
+[pressure_support]
+# "constant_scale_height" or "self_gravitating_hydrostatic"
+vertical_model = "self_gravitating_hydrostatic"
+
 [uv_fit]
 # Zero uses every unflagged visibility. A positive value deterministically
 # limits each channel for quick tests.
