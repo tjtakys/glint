@@ -1,5 +1,9 @@
 # Stage 2 settings. Mock truth and numerical grids are read from mock_truth.toml.
 
+[pressure_support]
+# "constant_scale_height" or "self_gravitating_hydrostatic"
+vertical_model = "self_gravitating_hydrostatic"
+
 [psf]
 fwhm_major_arcsec = 0.15
 fwhm_minor_arcsec = 0.12
