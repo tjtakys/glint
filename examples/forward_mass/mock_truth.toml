@@ -4,6 +4,7 @@
 [target]
 # assuming G09.83808
 redshift = 6.024
+coordinate_frame = "ICRS"
 phase_center_ra_deg = 135.1909708333
 phase_center_dec_deg = 0.6897777778
 
@@ -28,6 +29,8 @@ x_center_arcsec = 0.285
 y_center_arcsec = 0.030
 
 [spectral]
+# CASA frame name. Stage 1 writes its FITS equivalent (BARY -> BARYCENT).
+spectral_frame = "BARY"
 velocity_min_kms = -400.0
 velocity_max_kms = 400.0
 channel_width_kms = 25.0

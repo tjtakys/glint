@@ -1,6 +1,11 @@
 # Stage 3 settings. The mock galaxy, lens, grids, and spectral axis are shared
 # with the other stages through mock_truth.toml.
 
+[pressure_support]
+# Stage 3-2 fit assumption; Stage 3-1 simobserve does not use it.
+# "constant_scale_height" or "self_gravitating_hydrostatic"
+vertical_model = "self_gravitating_hydrostatic"
+
 [alma]
 antenna_configuration = "../data/configuration_files/alma.cycle7.5.cfg"
 integration = "10s"

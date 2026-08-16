@@ -14,6 +14,7 @@
     "weighting": "natural"
   },
   "case_name": "bt50_re03",
-  "lensed_sha256": "df2273b977505adc2015aacb68a8972e13a594d76f9760bef6f5cc389bd22763",
-  "schema_version": 2
+  "lensed_sha256": "54f0d89eb98de9d646cd8171ce5f37714bb3f510ad9345185dead06d38d8db9b",
+  "line_free_edge_channels": 2,
+  "schema_version": 5
 }
