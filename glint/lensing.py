@@ -470,6 +470,41 @@ def map_source_to_image_cube(
     return image_plane_flat
     """
 
+    if order == 1:
+        # β座標は全channel共通なので、bilinearのindex・重み計算を1回だけ行い、4回のfancy-index gatherで全channelへ一括適用する（sli.pyのbuild_matrix_lensingと同じ）
+        # 4点stencilがsource gridに完全に収まらないpixelを0にする。map_coordinatesは境界の外側だけをcval=0として部分的に補間するが、source cubeの端はゼロ余白前提（上のNotes参照）なので実質同じ。
+        i0 = np.floor(beta_x_pix).astype(np.int64)  # 左下pixelのx index
+        j0 = np.floor(beta_y_pix).astype(np.int64)  # 左下pixelのy index
+        inside = (
+            (i0 >= 0) & (i0 + 1 < nx_src)
+            & (j0 >= 0) & (j0 + 1 < ny_src)
+        )
+        # 範囲外はclipして安全なindexにし、最後にinsideで0にする
+        i0_safe = np.clip(i0, 0, nx_src - 2)
+        j0_safe = np.clip(j0, 0, ny_src - 2)
+        weight_dtype = (
+            source_cube.dtype
+            if np.issubdtype(source_cube.dtype, np.floating)
+            else np.float64
+        )
+        dx = (beta_x_pix - i0).astype(weight_dtype)
+        dy = (beta_y_pix - j0).astype(weight_dtype)
+        w00 = ((1.0 - dx) * (1.0 - dy)).ravel()
+        w10 = (dx * (1.0 - dy)).ravel()
+        w01 = ((1.0 - dx) * dy).ravel()
+        w11 = (dx * dy).ravel()
+        flat = source_cube.reshape(nch, -1)
+        index00 = (j0_safe * nx_src + i0_safe).ravel()  # flatten規約: j*nx + i
+        image_flat = (
+            flat[:, index00] * w00
+            + flat[:, index00 + 1] * w10
+            + flat[:, index00 + nx_src] * w01
+            + flat[:, index00 + nx_src + 1] * w11
+        )
+        image_flat *= inside.ravel()
+        return image_flat.reshape(nch, ny_img, nx_img)
+
+    # order >= 2 (spline) は従来どおりchannelごとのmap_coordinatesを使う。
     # 全channelで共通のXY座標
     coords = np.stack([beta_y_pix, beta_x_pix])
 
