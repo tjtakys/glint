@@ -43,7 +43,7 @@ class ImageContext:
     """
     forward_model_image のための固定変数をまとめたクラス
 
-    「毎回変わらないもの」だけ入れる：
+    サンプリング中に変わらないものだけ入れる：
       - grid (xx_img, yy_img, xx_src, yy_src)
       - pixelsize
       - channel info（vchan, raw correlator channel spacing）
@@ -163,11 +163,28 @@ class ImageContext:
             if not np.all(np.isfinite(beam)):
                 raise ValueError("beam contains NaN or inf.")
 
-            # Full shape
-            Ly = next_fast_len(ny + ky - 1)
-            Lx = next_fast_len(nx + kx - 1)
+            # FFTのコストは O(L^2 log L) で効くので注意
+            # L = next_fast_len(n + k - 1) とするとcrop外のところまで厳密に計算することになり無駄
+            # cropで使うのは index [s, s + n) だけ（s = k//2 はn/2中心規約でのkernel原点。CASA PSFのpeak位置と一致し、奇数kernelでは(k-1)//2と同値）。 <-- 地味に重要、注意しないと1pixズレる
+            # 簡単な例 : 1D, n=6, k=4, peakがc=2=k//2にあるkernel:
 
-            beam_fft = fftn(beam, s=(Ly, Lx), axes=(-2, -1)) # これで0-paddingしている
+            # I = [0, 0, 1, 0, 0, 0]          源は j0=2
+            # B = [.1, .5, 1, .5]             peak は c=2
+            # full conv C = [0, 0, .1, .5, 1, .5, 0, 0, 0]   peakは m = j0+c = 4
+
+            # scipy 'same' (s=(k-1)//2=1): C[1:7] = [0, .1, .5, 1, .5, 0]  → peakが i=3 No +1ずれ
+            # s = k//2 = 2:                C[2:8] = [.1, .5, 1, .5, 0, 0]  → peakが i=2 OK
+
+
+            # 巡回畳み込みのalias汚染は先頭 [0, n+k-1-L) に限られる。
+            # 以下の２条件を満たせばいい：
+            # 1. alias汚染がcrop内に入らないこと --> n + k - 1 - L <= s すなわち L >= n + k - 1 - s
+            # 2. cropの右端が配列内に収まること --> L >= s + n
+            # これでもcrop内はfull linear convolution (L >= n+k-1) と厳密に一致する。
+            Ly = next_fast_len(max(ny + ky - 1 - ky // 2, ky // 2 + ny)) # next_fast_lenは切り上げなので大丈夫
+            Lx = next_fast_len(max(nx + kx - 1 - kx // 2, kx // 2 + nx))
+
+            beam_fft = fftn(beam, s=(Ly, Lx), axes=(-2, -1)) # 0-paddingしている
             beam_rfft = rfftn(beam, s=(Ly, Lx), axes=(-2, -1))
 
             object.__setattr__(self, "beam_fft", beam_fft)
