@@ -53,7 +53,7 @@ free_parameters_bulge = [
     "lens_position_angle_deg",
     "log10_external_shear",
     "external_shear_position_angle_deg",
-    "external_convergence",
+#     "external_convergence",
 ]
 free_parameters_no_bulge = [
     "log10_m_baryon",
@@ -73,7 +73,7 @@ free_parameters_no_bulge = [
     "lens_position_angle_deg",
     "log10_external_shear",
     "external_shear_position_angle_deg",
-    "external_convergence",
+#     "external_convergence",
 ]
 
 [fit.bounds.log10_m_baryon]

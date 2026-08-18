@@ -24,7 +24,7 @@ y_center_arcsec = 0.0
 # Source- and image-plane coordinates share the same angular origin and axes.
 # Three times finer than the image grid for numerical source-plane sampling.
 pixel_size_arcsec = 0.010
-grid_size = 100
+grid_size = 200
 x_center_arcsec = 0.285
 y_center_arcsec = 0.030
 
@@ -40,7 +40,7 @@ raw_channel_spacing_kms = 0.541
 
 [radial_profile]
 radius_max_kpc = 5
-radial_step_arcsec = 0.01
+radial_step_arcsec = 0.01  # source gridの間隔が下限値
 
 [pressure_support]
 # "constant_scale_height" or "self_gravitating_hydrostatic"
