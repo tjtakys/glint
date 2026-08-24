@@ -14,6 +14,8 @@ from scipy.optimize import least_squares
 import emcee
 import dynesty
 
+from .pressure_support import UnphysicalPressureSupportError
+
 
 # ------------------- fitting utilities -------------------
 def run_least_squares(
@@ -315,3 +317,135 @@ def run_emcee(logprob_fn, x0, lb, ub, *, nwalkers=None, burnin=2000, production=
     print("===== end summary =====\n")
 
     return chain, logprob, sampler
+
+
+# ------------------- likelihood factories -------------------
+def make_visibility_loglikelihood(model, layout, uv_context, *, scale=1.0):
+    """複素visibilityのGaussian log-likelihoodを返すfactory
+    visibility計算には C++のfinufft.Planを使用している。これは固定値だが、plan.execute(coeff)を実行するとcoeffに応じて内部のscratchバッファに書き込むのでstatefulになる。
+    GILはあくまでPythonオブジェクトに限られ、C++の内部状態は保護されないので注意
+    だから、各threadに専用のloglikelihood（専用UVContext/planを内包する closure）を割り当てる必要がある
+
+    Parameters
+    ----------
+    model : ForwardModel
+    layout : ParameterLayout
+    uv_context : data/sigma入りのUVContext（``build_uv_observation``の出力）
+    scale : mock観測のflux_scaleなど、model cubeへ掛ける定数
+    """
+
+    data = uv_context.data
+    sigma = uv_context.sigma
+    uv_ctx = uv_context
+    log_normalization = 2.0 * np.sum(np.log(2.0 * np.pi * sigma**2))  # 実部と虚部の両方を考慮するために2倍（evidenceの絶対値に入るので）
+
+    def loglikelihood(theta):
+        try:
+            visibilities = model.make_visibilities(layout.decode(theta), uv_ctx, scale=scale)
+        except UnphysicalPressureSupportError: # pressure supportが重力を上回る非物理なsampleは-infで棄却
+            return -np.inf
+        chi2 = np.sum(np.abs((data - visibilities) / sigma) ** 2)
+        return -0.5 * (chi2 + log_normalization)
+
+    return loglikelihood
+
+
+def make_image_loglikelihood(model, layout, data_cube, noise_sigma, mask, *,
+                             scale=1.0, primary_beam=None):
+    """image-domain（beam畳み込み後cube）のGaussian log-likelihoodを返すfactory
+    各voxelのnoiseが独立で、既知の同じsigmaを持つと仮定している（dirty imageに使う場合はpixel相関を無視した近似）
+    （こっちはstatefulではないので、各threadで同じloglikelihoodを使っても問題ない）
+    
+    Parameters
+    ----------
+    model : ForwardModel（beam必須）
+    layout : ParameterLayout
+    data_cube : (nchan, ny, nx) 観測cube
+    noise_sigma : voxelあたりのnoise標準偏差（scalar）
+    mask : (nchan, ny, nx) bool。Trueのvoxelだけfitする
+    """
+
+    data = np.asarray(data_cube)[mask]
+    log_normalization = data.size * np.log(2.0 * np.pi * noise_sigma**2)
+
+    def loglikelihood(theta):
+        try:
+            model_cube = model.make_convolved_lensed_cube(
+                layout.decode(theta), scale=scale, primary_beam=primary_beam,
+            )[mask]
+        except UnphysicalPressureSupportError:
+            return -np.inf
+        chi2 = np.sum(((data - model_cube) / noise_sigma) ** 2)
+        return -0.5 * (chi2 + log_normalization)
+
+    return loglikelihood
+
+
+# ------------------- parallel dynesty -------------------
+def run_dynamic_dynesty_parallel(
+        make_loglikelihood, prior_transform, ndim, *, workers=1,
+        print_progress=True, **dynesty_options):
+    """1つのfitを複数threadで実行するrun_dynamic_dynestyのwrapper。
+
+    FINUFFT Plan.execute()はstatefulなので、同じplanを複数threadで共有せず、各threadへ専用のloglikelihood（専用UVContext/planを内包する closure）を一つずつ割り当てる。
+    ``make_loglikelihood()``は呼ぶたびに独立した資源を持つloglikelihoodを返すfactoryでないといけない（uv fitでは呼ぶたびにUVContextを再構築する）
+    読み取り専用資源しか使わないimage-domain fitでは、同じclosureを返すfactoryでよい。
+
+    workers=1では従来のserial実行と完全に同一
+    """
+    if int(workers) < 1:
+        raise ValueError("workers must be >= 1.")
+    if workers == 1:
+        return run_dynamic_dynesty(
+            make_loglikelihood(), prior_transform, ndim,
+            print_progress=print_progress, **dynesty_options,
+        )
+
+    from multiprocessing.pool import ThreadPool
+    from queue import SimpleQueue
+    from threading import local
+
+    # workerと同じ数だけ、独立したUVContext/planを持つloglikelihoodを先に作っておく
+    functions = [make_loglikelihood() for _ in range(int(workers))]
+    # SimpleQueueはthread-safeなので、各threadが排他的に1個だけ取り出せる
+    function_queue = SimpleQueue()
+    for function in functions:
+        function_queue.put(function)
+    # thread-local storage: 同じ変数名でも、OS threadごとに別の値を持てる。
+    thread_state = local()
+
+    def initialize_likelihood_thread():
+        # ThreadPoolの各workerが起動した直後に1回だけ呼ばれるinitializer。
+        # ここでqueueから1個取り出し、そのthread専用のthread_stateへ固定する。
+        # 以後そのthreadはずっと同じclosure（＝同じPlanインスタンス）だけを使い他のthreadと資源を共有しない。
+        thread_state.loglikelihood = function_queue.get()
+
+    def loglikelihood(theta):
+        # dynestyへ渡す関数は1個だが、実体は呼び出し元threadのthread_stateへ委譲するので、thread AとBが同時に呼んでも別々のPlanが動く。
+        return thread_state.loglikelihood(theta)
+
+    # processes=workersでthread数をfunctionsの数に一致させ、1 thread : 1 closureの対応を過不足なく成立させる。
+    pool = ThreadPool(processes=int(workers), initializer=initialize_likelihood_thread)
+    try:
+        return run_dynamic_dynesty(
+            loglikelihood, prior_transform, ndim,
+            pool=pool, queue_size=int(workers),
+            use_pool={
+                # 重いloglikelihood評価とpropose_point（新live pointの提案）だけをpoolへ回す。prior_transform/update_boundは軽いのでmain threadのまま。
+                'prior_transform': False, 'loglikelihood': True, 'propose_point': True, 'update_bound': False,
+            },
+            print_progress=print_progress, **dynesty_options,
+        )
+    finally:
+        # 全workerがexecute()を終えるのを待ってからpoolを閉じる。ここで待たずに抜けるとPlanの後片付けと実行中のexecute()が競合し得る。
+        pool.close()
+        pool.join()
+
+
+def weighted_quantile(values, quantiles, weights):
+    """Nested samplingの不均一なposterior weightを考慮した分位点。"""
+    order = np.argsort(values)
+    sorted_values = np.asarray(values)[order]
+    cumulative = np.cumsum(np.asarray(weights)[order])
+    cumulative /= cumulative[-1]
+    return np.interp(quantiles, cumulative, sorted_values)
