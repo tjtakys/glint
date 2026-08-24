@@ -764,7 +764,7 @@ class ForwardModel:
             radius_kpc=self.radius_kpc, **self.physical_keywords(parameters),
         )
 
-    def lens_curves(self, parameters: ModelParameters, min_points: int = 10):
+    def critical_lines_and_caustics(self, parameters: ModelParameters, min_points: int = 10, min_length: float = 0.0):
         """lens modelのcritical lines（image面）とcaustics（source面）[arcsec]。
         det A=0のcontourを求め、lens equationでsource面へ写す。
         """
@@ -774,10 +774,10 @@ class ForwardModel:
         )
         critical_lines = ls._filter_curves(
             ls._extract_zero_contours(self.xx_img, self.yy_img, det_a),
-            min_points=min_points,
+            min_points=min_points, min_length=min_length,
         )
-        caustics = [
+        caustics = ls._filter_curves([
             ls.map_curve_to_source(curve, ls.deflection_SIE_plus_ES, lens_kwargs)
             for curve in critical_lines
-        ]
+        ], min_points=min_points, min_length=min_length)
         return critical_lines, caustics
