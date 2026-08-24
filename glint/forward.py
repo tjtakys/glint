@@ -10,7 +10,7 @@ import numpy as np
 from typing import Optional, Tuple
 from scipy.signal import fftconvolve
 from scipy.fft import fftn, ifftn, rfftn, irfftn, next_fast_len
-from .context import ImageContext, UVContext
+from .context import UVContext
 from . import lensing as ls
 from .source import (
     make_rotating_disk_cube,
