@@ -38,6 +38,7 @@ def _as_positive_float(value: float, name: str) -> float:
 # -----------------------------
 # Image Contexts
 # -----------------------------
+''' ForwardModel class in forward.py に置き換え
 @dataclass(frozen=True, slots=True)
 class ImageContext:
     """
@@ -84,11 +85,6 @@ class ImageContext:
     # radial grid
     radius_arcsec: Optional[np.ndarray] = None  # shape (nr,)
 
-    # fixed parameters
-    x_s: Optional[float] = None
-    y_s: Optional[float] = None
-    inc_deg: Optional[float] = None
-
     def __post_init__(self):
         object.__setattr__(self, "xx_img", _as_float32_c(self.xx_img))
         object.__setattr__(self, "yy_img", _as_float32_c(self.yy_img))
@@ -133,9 +129,7 @@ class ImageContext:
             or self.raw_channel_spacing_kms < 0
         ):
             raise ValueError("raw_channel_spacing_kms must be finite and >= 0.")
-        for name in (
-            "x0_src", "y0_src", "x0_l", "y0_l", "x_s", "y_s", "inc_deg"
-        ):
+        for name in ("x0_src", "y0_src", "x0_l", "y0_l"):
             value = getattr(self, name)
             if value is not None and not np.isfinite(value):
                 raise ValueError(f"{name} must be finite.")
@@ -204,7 +198,7 @@ class ImageContext:
     @property
     def src_shape(self) -> Tuple[int, int]:
         return (int(self.xx_src.shape[0]), int(self.xx_src.shape[1]))
-
+'''
 
 
 
@@ -220,6 +214,7 @@ class UVContext:
       - primary beam (pb)
       - FINUFFT plans / slices / Ntot
       - flag
+      - (optional) flatten済みのdata/sigma（``build_uv_observation``が設定）
     """
     # primary beam on image grid: (ny_img, nx_img) or (nchan, ny_img, nx_img)
     pb: np.ndarray
@@ -241,6 +236,11 @@ class UVContext:
 
     # FINUFFT transform type used by plans
     nufft_type: int = 3
+
+    # (optional) flatten済みの観測visibilityと1 sigma。``slices``と同じ並びで、
+    # ``build_uv_observation``が構築時に整合を保証する（演算子だけの用途ではNone）。
+    data: Optional[np.ndarray] = None   # (Ntot,) complex
+    sigma: Optional[np.ndarray] = None  # (Ntot,) per-component std [Jy]
 
     def __post_init__(self):
         nchan = _as_int(self.nchan, "nchan")
@@ -265,6 +265,10 @@ class UVContext:
             raise ValueError("Ntot must be >= 0.")
         if self.nufft_type not in (2, 3):
             raise ValueError("nufft_type must be 2 or 3.")
+        for name in ("data", "sigma"):
+            value = getattr(self, name)
+            if value is not None and np.asarray(value).shape != (ntotal,):
+                raise ValueError(f"{name} must have shape (Ntot,) = ({ntotal},).")
 
         if self.pb.ndim == 2:
             pass
@@ -368,7 +372,7 @@ def build_uv_layout(
            List[Optional[slice]], 
            int]:
     """
-    k_list / slices / Ntot を作る
+    計算の途中で不変なk_list / slices / Ntot を作る
     """
     u = np.asarray(u)
     v = np.asarray(v)
@@ -397,6 +401,7 @@ def build_uv_layout(
             k_list.append(None)
             slices.append(None)
             continue
+        # 必ずinterferometer.py と同じ規約でFINUFFTの座標系に変換する。
         kx = -(2.0 * np.pi * u[i, m]).astype(np.float32, order="C")
         ky =  (2.0 * np.pi * v[i, m]).astype(np.float32, order="C")
         k_list.append((kx, ky))
@@ -482,3 +487,54 @@ def build_finufft_plans(
         plans[i] = plan
 
     return plans
+
+
+def flatten_selected(array: np.ndarray, flag: np.ndarray, slices) -> np.ndarray:
+    # (nchan, nrow)配列のnon-flag要素を抜き出して、slicesと同じ並びの1次元にする
+    array = np.asarray(array)
+    output = np.empty(
+        sum(int(np.count_nonzero(~row)) for row in flag), dtype=array.dtype,
+    )
+    for channel, output_slice in enumerate(slices):
+        if output_slice is not None:
+            output[output_slice] = array[channel, ~flag[channel]]
+    return output
+
+
+def build_uv_observation(
+    *,
+    u_lam: np.ndarray,          # (nchan, nrow) [wavelengths]
+    v_lam: np.ndarray,          # (nchan, nrow) [wavelengths]
+    data: np.ndarray,           # (nchan, nrow) complex visibilities
+    sigma: np.ndarray,          # (nchan, nrow) per-component std [Jy]
+    flag: np.ndarray,           # (nchan, nrow) True=使わない
+    pb: np.ndarray,             # image grid上のprimary beam (ny,nx) or (nchan,ny,nx)
+    image_shape: Tuple[int, int],
+    pixsize_arcsec: float,
+    nufft_type: int = 2,
+    eps: float = 1e-6,
+    xx_arcsec: Optional[np.ndarray] = None,  # type-3のときのみ必要
+    yy_arcsec: Optional[np.ndarray] = None,
+) -> UVContext:
+    """uv fitの固定部分（FINUFFT演算子＋flatten済みdata/sigma）を持つUVContextを構築する
+
+    channel順・flag処理・FINUFFT planの整合はここで一括して保証される
+    """
+    k_list, slices, ntotal = build_uv_layout(u_lam, v_lam, flag)
+    arcsec2rad = np.deg2rad(1.0 / 3600.0)
+    plans = build_finufft_plans(
+        k_list,
+        l_rad=None if xx_arcsec is None else xx_arcsec * arcsec2rad,
+        m_rad=None if yy_arcsec is None else yy_arcsec * arcsec2rad,
+        nufft_type=nufft_type,
+        image_shape=image_shape,
+        pixsize_arcsec=float(pixsize_arcsec),
+        eps=float(eps),
+    )
+    return UVContext(
+        pb=pb, plans=plans, slices=slices,
+        nchan=int(np.asarray(data).shape[0]), Ntot=ntotal, flag=flag,
+        nufft_type=nufft_type,
+        data=flatten_selected(data, flag, slices),
+        sigma=flatten_selected(sigma, flag, slices),
+    )
