@@ -16,5 +16,5 @@
   "case_name": "bt25_re06",
   "lensed_sha256": "dade61ce1daf373416b2e7379ca2e7d7e856cba5ef9520392b1e49f11c2e94ed",
   "line_free_edge_channels": 2,
-  "schema_version": 5
+  "schema_version": 7
 }
