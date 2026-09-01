@@ -5,13 +5,11 @@
 vertical_model = "self_gravitating_hydrostatic"
 
 [uv_fit]
-# Zero uses every unflagged visibility. A positive value deterministically
-# limits each channel for quick tests.
-max_visibilities_per_channel = 0
 nufft_type = 2
 finufft_tolerance = 1.0e-6
-# CASA weightの相対比を使い、絶対スケールだけline-free dataで較正する。
-noise_sigma_source = "scaled_exported"
+# σはnpzに記録済みのfull-band line-free scaleで較正する（3-1が記録。G09 fitと同じ流儀）。
+noise_sigma_source = "recorded"
+# 3-1がexport時に落とすline-free端channel数。fitのchannel gridも同数だけ両端を削る。
 line_free_edge_channels = 2
 
 [parallel]
