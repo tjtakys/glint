@@ -28,3 +28,6 @@ casa-*.log
 *.egg-info/
 dist/
 build/
+
+# artifacts
+paper
