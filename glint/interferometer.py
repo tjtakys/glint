@@ -304,3 +304,46 @@ def vis_to_image_finufft_type3(
         isign=-1, eps=eps,
     ).reshape(xx_as.shape)
     return (image / weight_sum).real, (beam / weight_sum).real
+
+
+def beam_fwhm_ellipse(beam_image, pixsize_arcsec, crop=40):
+    """Fit an ellipse to the half-maximum contour of the dirty-beam main lobe.
+
+    The beam is cropped around its peak and the ellipse is estimated from the
+    second moments of the half-maximum mask (a uniformly filled ellipse has
+    variance ``(semi-axis)^2 / 4``, so ``FWHM = 4 sqrt(eigenvalue)``).
+    Intended for drawing the synthesized beam on maps.
+
+    Parameters
+    ----------
+    beam_image : 2D array
+        Dirty beam image on the glint grid convention
+        (+x = west, +y = north; see ``lensing.make_grid_arcsec``).
+    pixsize_arcsec : float
+        Pixel scale [arcsec].
+    crop : int, optional
+        Half-size [pixels] of the cutout around the peak used for the fit.
+
+    Returns
+    -------
+    fwhm_major, fwhm_minor : float
+        FWHM of the major and minor axes [arcsec].
+    position_angle_deg : float
+        Position angle of the major axis [deg] in [0, 180), measured from
+        north through east (the FITS ``BPA`` convention). The array angle
+        measured counterclockwise from +x is ``90 + position_angle_deg``; 
+        pass that value as ``matplotlib.patches.Ellipse(angle=...)`` when plotting.
+    """
+    beam = np.asarray(beam_image, dtype=float)
+    peak_y, peak_x = np.unravel_index(np.argmax(beam), beam.shape)
+    core = beam[max(peak_y - crop, 0):peak_y + crop + 1,
+                max(peak_x - crop, 0):peak_x + crop + 1] / beam[peak_y, peak_x] # 規格化
+    ys, xs = np.nonzero(core >= 0.5) # FWHM contourの内側のみ
+    x = (xs - xs.mean()) * float(pixsize_arcsec)
+    y = (ys - ys.mean()) * float(pixsize_arcsec)
+    covariance = np.cov(np.vstack([x, y]))
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance) # 向きと長さの固有値・固有ベクトル
+    fwhm_minor, fwhm_major = 4.0 * np.sqrt(np.maximum(eigenvalues, 0.0))
+    array_angle_deg = float(np.degrees(np.arctan2(eigenvectors[1, -1], eigenvectors[0, -1])))
+    position_angle_deg = (array_angle_deg - 90.0) % 180.0
+    return float(fwhm_major), float(fwhm_minor), position_angle_deg
