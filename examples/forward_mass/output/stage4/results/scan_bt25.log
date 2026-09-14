@@ -1,0 +1,3 @@
+== bt25_re03 profile likelihood scan in inclination; dynesty ML lnL=916433.19 at i=27.09
+   i= 27.0: profile lnL - ML =   +1.27  nfev=6853  logMb=11.090 B/T=0.233 Re=0.286 Rd=1.009 logM200=11.50 SB=0.1477 sig0=71.2 q_l=0.811 PA_l=91.8 logg=-2.06  (14.4 min)
+   i= 30.0: profile lnL - ML =   +0.24  nfev=6463  logMb=11.010 B/T=0.232 Re=0.282 Rd=1.011 logM200=11.44 SB=0.1496 sig0=70.8 q_l=0.809 PA_l=92.9 logg=-2.19  (13.2 min)

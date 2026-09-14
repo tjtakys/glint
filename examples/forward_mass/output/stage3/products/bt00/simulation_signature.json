@@ -14,7 +14,7 @@
     "weighting": "natural"
   },
   "case_name": "bt00",
-  "lensed_sha256": "dc5877da8b5489f4c99beb2e92ee54867f5a8ad3da4ac8740ed3f9e0b6e7e78f",
+  "lensed_sha256": "72723dc34235c8ad25fd4339aa1222ea29b85f0b0bc9639dadae2603eb3aa1a4",
   "line_free_edge_channels": 2,
   "schema_version": 7
 }

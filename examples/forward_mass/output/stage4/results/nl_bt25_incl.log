@@ -1,0 +1,5 @@
+== bt25_re03 noiseless: chi2 at truth = 1.38
+   fixed 32.0: profile chi2 =     1.68  logMb=10.951 B/T=0.251 Rd=1.002 logM200=11.48 SB=0.1516 sig0=69.7 flux=1.005 q_l=0.798 PA_l=90.9 logg=-2.10 PAg=49 (9.5 min)
+   fixed 34.0: profile chi2 =     6.76  logMb=10.907 B/T=0.253 Rd=1.007 logM200=11.46 SB=0.1531 sig0=69.5 flux=1.005 q_l=0.796 PA_l=91.9 logg=-2.24 PAg=54 (5.0 min)
+   fixed 28.0: profile chi2 =     1.40  logMb=11.057 B/T=0.248 Rd=1.004 logM200=11.44 SB=0.1488 sig0=70.3 flux=1.006 q_l=0.802 PA_l=89.1 logg=-1.92 PAg=43 (7.2 min)
+   fixed 26.0: profile chi2 =     4.81  logMb=11.116 B/T=0.247 Rd=1.003 logM200=11.46 SB=0.1475 sig0=70.4 flux=1.007 q_l=0.803 PA_l=88.3 logg=-1.86 PAg=42 (4.3 min)

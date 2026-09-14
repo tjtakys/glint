@@ -1,9 +1,9 @@
 {
   "cases": [
     {
-      "intrinsic_sha256": "ea6b5f6dfb661d1d7c15b6e25c58a450d8e7f553ade6c65187169802e5fe5c58",
+      "intrinsic_sha256": "746a8166d39822ad24cdb66b82fa6cdcacc99ee19101e1f91541f3ba7075a017",
       "intrinsic_source_cube": "bt10_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "e494acf6ef8598cca6f79304c51b0a27f3973af510ef53f6d29c2065d45ad44a",
+      "lensed_sha256": "774d15034654f560de7e84b43735704d1ce001d13f89779c0c06c5ac3abb857a",
       "lensed_sky_cube": "bt10_re03/lensed_sky_cube.fits",
       "name": "bt10_re03",
       "parameters": {
@@ -14,8 +14,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -25,16 +25,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "857b67327f2a080f9faebac68d3d27d515aedccfb04ee74235090aa75e6ace0a",
+      "intrinsic_sha256": "55f0edaf697aef7f83249fce6c9e67e4dfd79863ca08a6b720d123b80148aaf2",
       "intrinsic_source_cube": "bt10_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "38e5a28051611d7ba23e501a3435c1cb2b84fe24000186ac879758ce12acc967",
+      "lensed_sha256": "d93529cc39c61e89295bd0da5d8bc5889999225c9dca32beb8b7db81f0b621eb",
       "lensed_sky_cube": "bt10_re06/lensed_sky_cube.fits",
       "name": "bt10_re06",
       "parameters": {
@@ -45,8 +45,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -56,16 +56,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "c852c1389605889ab81dda8f629e1b7c1c7f30d64cc310d05850f8137990fa77",
+      "intrinsic_sha256": "fb0cac0e285a6680b07210cbc93d8ab90f058162ad0cf1984ae2bc2a7fecdd04",
       "intrinsic_source_cube": "bt25_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "f6a1e654a8ef0cfb08bcb0dc56afc711b63a79e859bb9173dac62b56a3526279",
+      "lensed_sha256": "851712fc054ba7f184a9ddd60079035ad76cf8a460a264649151da4d2dbeeebd",
       "lensed_sky_cube": "bt25_re03/lensed_sky_cube.fits",
       "name": "bt25_re03",
       "parameters": {
@@ -76,8 +76,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -87,16 +87,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "400fb7b5b541160310d5ae950dd64c951bf762f995a13c310d4f797a231bf343",
+      "intrinsic_sha256": "3058a7c4fbb680043b54b428e2a7c42e189a80893a2d84c4c0df280970fb7599",
       "intrinsic_source_cube": "bt25_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "dade61ce1daf373416b2e7379ca2e7d7e856cba5ef9520392b1e49f11c2e94ed",
+      "lensed_sha256": "950586d223bbd1b71825b6a5707d8b4c9f106fb6e4ef2991f60c6bb943995a56",
       "lensed_sky_cube": "bt25_re06/lensed_sky_cube.fits",
       "name": "bt25_re06",
       "parameters": {
@@ -107,8 +107,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -118,16 +118,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "fb32cc12ac0acbf576e371ca2b3b3a0f34604e826855b94387510031a5d5cfb0",
+      "intrinsic_sha256": "8203a4714db8a7de56e48fda79f16823727e28562dd6a3c7d46d29c887252491",
       "intrinsic_source_cube": "bt50_re03/intrinsic_source_cube.fits",
-      "lensed_sha256": "41f9311c1aab38fc56fbeccd4fb0232841d43dd75c17e63ea808af5b5f53aa96",
+      "lensed_sha256": "a4ac8ee1bfd10ba963d107da8a8e4f48dc475f9af07cf17df479668722dc2ff6",
       "lensed_sky_cube": "bt50_re03/lensed_sky_cube.fits",
       "name": "bt50_re03",
       "parameters": {
@@ -138,8 +138,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -149,16 +149,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "ae349db355bc648484283d5bef48a92fa42414707a2dd4063ed8e49718d6a942",
+      "intrinsic_sha256": "7fb12e5a19a95436d693ce220f905ba4bbafca533e6f74dbc8aab4a2caafd8a6",
       "intrinsic_source_cube": "bt50_re06/intrinsic_source_cube.fits",
-      "lensed_sha256": "9435b4aaacb312876b7d3aecfde0043617b21442f976c4e3268e52ea5edc84f5",
+      "lensed_sha256": "295f4b465d6b59c65497eeb435ad71336ff8e1441f7b01efa9719260f212e055",
       "lensed_sky_cube": "bt50_re06/lensed_sky_cube.fits",
       "name": "bt50_re06",
       "parameters": {
@@ -169,8 +169,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -180,16 +180,16 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     },
     {
-      "intrinsic_sha256": "8ff45dda00f56291fa0e7f5ba66b2bb74288196ab0facd6c7e5e7393237e626f",
+      "intrinsic_sha256": "2d7e321370ac91940be55a4ce7068321ffb592a281a8dc6696920b78bf2457e3",
       "intrinsic_source_cube": "bt00/intrinsic_source_cube.fits",
-      "lensed_sha256": "dc5877da8b5489f4c99beb2e92ee54867f5a8ad3da4ac8740ed3f9e0b6e7e78f",
+      "lensed_sha256": "72723dc34235c8ad25fd4339aa1222ea29b85f0b0bc9639dadae2603eb3aa1a4",
       "lensed_sky_cube": "bt00/lensed_sky_cube.fits",
       "name": "bt00",
       "parameters": {
@@ -200,8 +200,8 @@
         "external_convergence": 0.0,
         "external_shear_position_angle_deg": 45.0,
         "flux_normalization": 1.0,
-        "inclination_deg": 45.0,
-        "lens_axis_ratio": 0.95,
+        "inclination_deg": 30.0,
+        "lens_axis_ratio": 0.8,
         "lens_position_angle_deg": 90.0,
         "lens_x_arcsec": 0.0,
         "lens_y_arcsec": 0.0,
@@ -211,10 +211,10 @@
         "position_angle_deg": 35.0,
         "source_x_arcsec": 0.285,
         "source_y_arcsec": 0.03,
-        "surface_brightness_scale_arcsec": 0.22,
+        "surface_brightness_scale_arcsec": 0.15,
         "systemic_velocity_kms": 0.0,
-        "velocity_dispersion_center_kms": 30.0,
-        "velocity_dispersion_scale_arcsec": 0.8
+        "velocity_dispersion_center_kms": 70.0,
+        "velocity_dispersion_scale_arcsec": 1.0
       }
     }
   ],

@@ -77,67 +77,67 @@ free_parameters_no_bulge = [
 ]
 
 [fit.bounds.log10_m_baryon]
-lower = 10.3
-upper = 11.7
+lower = 10.0
+upper = 12.0
+
+[fit.bounds.disk_scale_radius_kpc]
+lower = 0.2
+upper = 3.0
+
+[fit.bounds.log10_m200]
+lower = 10.0
+upper = 14.0
 
 [fit.bounds.bulge_to_total]
 lower = 0.0
 upper = 0.75
 
-[fit.bounds.disk_scale_radius_kpc]
-lower = 0.40
-upper = 2.00
-
 [fit.bounds.bulge_effective_radius_kpc]
-lower = 0.10
-upper = 1.00
-
-[fit.bounds.log10_m200]
-lower = 10.5
-upper = 12.5
+lower = 0.05
+upper = 1.5
 
 [fit.bounds.source_x_arcsec]
-lower = -0.20
-upper = 0.70
+lower = -0.4
+upper = 0.7
 
 [fit.bounds.source_y_arcsec]
-lower = -0.40
-upper = 0.40
+lower = -0.4
+upper = 0.4
 
 [fit.bounds.flux_normalization]
-lower = 0.20
-upper = 2.00
+lower = 0.01
+upper = 3.0
 
 [fit.bounds.inclination_deg]
-lower = 20.0
+lower = 10.0
 upper = 80.0
 
 [fit.bounds.position_angle_deg]
-lower = 0.0
-upper = 180.0
+lower = 0
+upper = 360
 
 [fit.bounds.surface_brightness_scale_arcsec]
-lower = 0.05
-upper = 0.60
+lower = 0.03
+upper = 0.6
 
 [fit.bounds.velocity_dispersion_center_kms]
 lower = 5.0
-upper = 100.0
+upper = 250.0
 
 [fit.bounds.velocity_dispersion_scale_arcsec]
-lower = 0.10
-upper = 2.00
+lower = 0.03
+upper = 10.0
 
 [fit.bounds.systemic_velocity_kms]
 lower = -100.0
 upper = 100.0
 
 [fit.bounds.einstein_radius_arcsec]
-lower = 0.70
-upper = 1.70
+lower = 0.7
+upper = 1.7
 
 [fit.bounds.lens_axis_ratio]
-lower = 0.50
+lower = 0.5
 upper = 0.999
 
 [fit.bounds.lens_position_angle_deg]
@@ -149,12 +149,12 @@ lower = -4.0
 upper = -0.5
 
 [fit.bounds.external_shear_position_angle_deg]
-lower = 0.0
-upper = 180.0
+lower = 0
+upper = 180
 
 [fit.bounds.external_convergence]
-lower = -0.20
-upper = 0.20
+lower = -0.2
+upper = 0.2
 
 [dynesty]
 nlive_init = 150
