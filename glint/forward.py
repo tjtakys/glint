@@ -39,7 +39,7 @@ def forward_model_2D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     params : array-like
       [x_s, y_s, F_0, ellip, pa_deg, r_eff, n,
        (x0, y0), # optional: lens center (HST Gaussian fitとかで固定するなら),
-       b, q_l, pa_l, log_gamma, pa_gamma]
+       b, q_l, pa_l, gamma1, gamma2]
       単位: arcsec, deg, km/s, rad
 
     ctx : ImageContext
@@ -54,14 +54,14 @@ def forward_model_2D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     p = np.asarray(params, dtype=float)
 
     x_s, y_s, F_0, ellip, pa_deg, r_eff, n, \
-        b, q_l, pa_l, log_gamma, pa_gamma = p
+        b, q_l, pa_l, gamma1, gamma2 = p
 
     # deflection angle
     alpha_x_as, alpha_y_as = ls.deflection_SIE_plus_ES(
         xx=ctx.xx_img, yy=ctx.yy_img,
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
         x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
-        log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
+        gamma1=gamma1, gamma2=gamma2, kappa=0
     )
 
     beta_x_as, beta_y_as = ctx.xx_img - alpha_x_as, ctx.yy_img - alpha_y_as
@@ -331,7 +331,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
       [x_s, y_s, F_0, inc_deg, pa_deg, r_scale,
        (x0, y0), # optional: lens center (HST Gaussian fitとかで固定するなら),
        v_c, r_turn, gamma_curve, sigma_0, r_sigma, vsys_kms,
-       b, q_l, pa_l, log_gamma, pa_gamma]
+       b, q_l, pa_l, gamma1, gamma2]
       単位: arcsec, deg, km/s, rad
 
     ctx : ImageContext
@@ -359,7 +359,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
     F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
-        b, q_l, pa_l, log_gamma, pa_gamma = p
+        b, q_l, pa_l, gamma1, gamma2 = p
         # b, log_gamma, pa_gamma = p
 
 
@@ -369,7 +369,7 @@ def forward_model_3D_image(params: np.ndarray, ctx: ImageContext) -> Tuple[np.nd
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
         x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
         # x0=ctx.x0_l, y0=ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
-        log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
+        gamma1=gamma1, gamma2=gamma2, kappa=0
     )
     beta_x_as, beta_y_as = ctx.xx_img - alpha_x_as, ctx.yy_img - alpha_y_as
 
@@ -456,7 +456,7 @@ def _make_lensed_cube_for_vis(params: np.ndarray, img_ctx: ImageContext) -> np.n
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
     # F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, \
     F_0, pa_deg, r_scale, v_c, r_turn, beta_curve, gamma_curve, sigma_0, r_sigma, vsys_kms, \
-        b, q_l, pa_l, log_gamma, pa_gamma = p
+        b, q_l, pa_l, gamma1, gamma2 = p
         # b, log_gamma, pa_gamma = p
 
 
@@ -466,7 +466,7 @@ def _make_lensed_cube_for_vis(params: np.ndarray, img_ctx: ImageContext) -> np.n
         # x0=x_l, y0=y_l, b=b, q=q_l, pa=pa_l,
         x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=q_l, pa=pa_l, # lens centerはHST Gaussian fitで固定している
         # x0=img_ctx.x0_l, y0=img_ctx.y0_l, b=b, q=1, pa=0, # lens centerはHST Gaussian fitで固定している
-        log_gamma=log_gamma, pa_gamma=pa_gamma, kappa=0
+        gamma1=gamma1, gamma2=gamma2, kappa=0
     )
     beta_x_as, beta_y_as = img_ctx.xx_img - alpha_x_as, img_ctx.yy_img - alpha_y_as
 
@@ -675,8 +675,8 @@ class ForwardModel:
             'x0': parameters.lens_x_arcsec, 'y0': parameters.lens_y_arcsec,
             'b': parameters.einstein_radius_arcsec, 'q': parameters.lens_axis_ratio,
             'pa': np.deg2rad(parameters.lens_position_angle_deg),
-            'log_gamma': parameters.log10_external_shear,
-            'pa_gamma': np.deg2rad(parameters.external_shear_position_angle_deg),
+            'gamma1': parameters.external_shear_gamma1,
+            'gamma2': parameters.external_shear_gamma2,
             'kappa': parameters.external_convergence,
         }
 

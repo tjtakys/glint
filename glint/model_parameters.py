@@ -33,13 +33,17 @@ LENS_PARAMETER_NAMES = (
     "einstein_radius_arcsec",
     "lens_axis_ratio",
     "lens_position_angle_deg",
-    "log10_external_shear",
-    "external_shear_position_angle_deg",
+    "external_shear_gamma1",
+    "external_shear_gamma2",
     "external_convergence",
 )
 ALL_PARAMETER_NAMES = (
     MASS_PARAMETER_NAMES + SOURCE_PARAMETER_NAMES + LENS_PARAMETER_NAMES
 )
+
+# 角度: 全て+x（西）から反時計回り（北向き）に測る [deg]。
+# priorはuniform窓で、幅はmodelの周期に合わせる（円盤PAは受け側/近づく側の区別があるので0–360、SIEのPAは楕円の対称性で0–180）
+# external shearはCartesian成分 (gamma1, gamma2) = gamma (cos 2PA, sin 2PA) で持つ <-- 元々の極座標系から変更した。ゼロが正規の点になり、log振幅+自由PAがゼロ近傍に持つ無限のprior体積を避ける。
 
 PARAMETER_INDEX = {
     name: index for index, name in enumerate(ALL_PARAMETER_NAMES)
@@ -76,8 +80,8 @@ class ModelParameters(NamedTuple):
     einstein_radius_arcsec: float
     lens_axis_ratio: float
     lens_position_angle_deg: float
-    log10_external_shear: float
-    external_shear_position_angle_deg: float
+    external_shear_gamma1: float
+    external_shear_gamma2: float
     external_convergence: float
 
     @classmethod

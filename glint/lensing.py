@@ -98,7 +98,7 @@ def deflection_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
 
 
 # External shear
-def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
+def deflection_ES(xx, yy, x0, y0, gamma1, gamma2, kappa=0.0):
     """
     External shear at the lens center (x0,y0).
 
@@ -108,12 +108,10 @@ def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
         Image-plane coordinates (same shape).
     x0, y0 : float
         Lens center.
-    log_gamma : float
-        Shear amplitude in log10 scale.
-        gamma = 10**log_gamma
-    pa_gamma : float
-        Shear position angle in radians.  gamma1 = gamma cos(2pa_gamma), gamma2 = gamma sin(2pa_gamma).
-        pa_gamma ∈ [0, π/2) is sufficient
+    gamma1, gamma2 : float
+        Cartesian shear components.
+        gamma1 = gamma cos(2pa_gamma), gamma2 = gamma sin(2pa_gamma) で、pa_gammaは+x（西）から反時計回り。
+        ゼロが正規の点になり、log振幅prior + free PAがゼロ近傍に持っていた無限の体積が無くなるので極座標表示よりdynestyのバイアス無くなる
     kappa : float
         Convergence (mass sheet).
     """
@@ -122,9 +120,6 @@ def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
     y_shift = yy - y0
 
     # Deflection due to shear and convergence
-    gamma1 = 10**log_gamma * np.cos(2.0 * pa_gamma)
-    gamma2 = 10**log_gamma * np.sin(2.0 * pa_gamma)
-
     alpha_x = x_shift * (kappa + gamma1) + y_shift * gamma2
     alpha_y = x_shift * gamma2 + y_shift * (kappa - gamma1)
 
@@ -132,13 +127,13 @@ def deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa=0.0):
 
 
 # Combined SIE + external shear
-def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa):
+def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, gamma1, gamma2, kappa):
     """
     Combined deflection from SIE + external shear.
-    pa, pa_gamma: in radians
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
     """
     alpha_x_sie, alpha_y_sie = deflection_SIE(xx, yy, x0, y0, b, q, pa)
-    alpha_x_es, alpha_y_es = deflection_ES(xx, yy, x0, y0, log_gamma, pa_gamma, kappa)
+    alpha_x_es, alpha_y_es = deflection_ES(xx, yy, x0, y0, gamma1, gamma2, kappa)
     alpha_x = alpha_x_sie + alpha_x_es
     alpha_y = alpha_y_sie + alpha_y_es
     return alpha_x, alpha_y
@@ -146,7 +141,7 @@ def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa)
 
 def deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
     """Analytic derivatives of the SIE deflection field.
-    pa: in radians
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
     """
     x_shift = xx - x0
     y_shift = yy - y0
@@ -190,13 +185,10 @@ def deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa, s=0.0):
     ))
 
 
-def deflection_jacobian_ES(xx, yy, log_gamma, pa_gamma, kappa=0.0):
+def deflection_jacobian_ES(xx, yy, gamma1, gamma2, kappa=0.0):
     """Analytic derivatives of the external-shear deflection field.
-    pa_gamma: in radians
+    gamma1, gamma2: Cartesian shear components.
     """
-    gamma = 10**log_gamma
-    gamma1 = gamma * np.cos(2.0 * pa_gamma)
-    gamma2 = gamma * np.sin(2.0 * pa_gamma)
     shape = np.broadcast_shapes(np.shape(xx), np.shape(yy))
     return (
         np.full(shape, kappa + gamma1),
@@ -207,12 +199,12 @@ def deflection_jacobian_ES(xx, yy, log_gamma, pa_gamma, kappa=0.0):
 
 
 def deflection_jacobian_SIE_plus_ES(
-        xx, yy, x0, y0, b, q, pa, log_gamma, pa_gamma, kappa):
+        xx, yy, x0, y0, b, q, pa, gamma1, gamma2, kappa):
     """Analytic derivatives of the combined SIE and external-shear deflection.
-    pa_gamma: in radians
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
     """
     sie = deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa)
-    shear = deflection_jacobian_ES(xx, yy, log_gamma, pa_gamma, kappa)
+    shear = deflection_jacobian_ES(xx, yy, gamma1, gamma2, kappa)
     return tuple(sie_term + shear_term for sie_term, shear_term in zip(sie, shear))
     
 
