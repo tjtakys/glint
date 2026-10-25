@@ -1,9 +1,10 @@
 """
 lensing.py : Calculate lensing deflection angles and related quantities.
 
-Models
+Mass models
 ------
 - SIE (Singular Isothermal Ellipsoid): implemented.
+- EPL (Elliptical Power-Law): implemented.
 """
 
 from __future__ import annotations
@@ -126,6 +127,89 @@ def deflection_ES(xx, yy, x0, y0, gamma1, gamma2, kappa=0.0):
     return alpha_x, alpha_y
 
 
+# Elliptical power-law (EPL; Tessore & Metcalf 2015; https://arxiv.org/abs/1507.01819) deflection.
+def _epl_omega(phi, t, q, tol=1e-14, max_terms=5000):
+    """
+    Tessore & Metcalf 2015, eq. (23, 27, 28, 29)
+    汎用的な超幾何関数（scipy.special.hyp2f1）を呼ぶよりも EPLの場合は係数が特殊で漸化式が綺麗に決まるので、4章にある漸化式で評価した方が速い
+    項数は f^n < tol となるまで（q=0.88 なら ~12 項）。
+    """
+    f = (1.0 - q) / (1.0 + q)
+    term = np.exp(1j * phi)
+    rotate = np.exp(2j * phi)
+    omega = term.copy()
+    if f <= 0.0:
+        return omega  # q=1: 球対称、ω = e^{iφ}
+    # 各項の比の絶対値は f 未満なので打ち切り誤差は f^n 以下（t<2; slope<3なら）。q=0.88 で 12 項、q=0.3 で 54 項、q=0.05 で 324 項。
+    n_terms = int(np.ceil(np.log(tol) / np.log(f))) + 1
+    if n_terms > max_terms:
+        import warnings
+        warnings.warn(f"_epl_omega: q={q:.4f} needs {n_terms} terms for tol={tol:g}; truncated at {max_terms}.", stacklevel=2)
+        n_terms = max_terms
+    for n in range(1, n_terms):
+        term = term * (-f * (2 * n - (2 - t)) / (2 * n + (2 - t))) *  rotate # Eq. (27, 28, 29)
+        omega += term
+    return omega
+
+
+def deflection_EPL(xx, yy, x0, y0, b, q, pa, slope):
+    """
+    Compute deflection angles for an Elliptical Power-Law (EPL) lens model (Tessore & Metcalf 2015 (eq. 22)).
+    slope=2 reproduces ``deflection_SIE`` to machine precision (tests/test_lensing.py).
+    All lengths in arcsec/pix (common), theta in radians.
+
+    Parameters
+    ----------
+    xx, yy : 2D array
+        Image-plane coordinates (same shape).
+    x0, y0 : float
+        Lens center.
+    b : float
+        Einstein radius (same convention as ``deflection_SIE``; equals the SIS Einstein radius for q=1).
+    q : float
+        Axis ratio (b/a). Should be in (0, 1]. q=1 gives the spherical power law
+        (unlike ``deflection_SIE``, q=1 is allowed).
+    pa : float
+        Position angle (radians) measured from x-axis (+x = west) to major axis, counter-clockwise.
+    slope : float
+        3D density slope γ' of the power law (ρ ∝ r^(−γ')). slope=2 is isothermal (SIE);
+        slope>2 is steeper (α diverges at the center), slope<2 is shallower (α → 0 at the center).
+
+    Returns
+    -------
+    alpha_x, alpha_y : 2D array
+        Deflection angles with same shape as xx, yy. At the exact lens center (a measure-zero
+        singular point) 0 is returned, as in ``deflection_SIE``.
+    """
+    x_shift = xx - x0
+    y_shift = yy - y0
+    cos_pa, sin_pa = np.cos(pa), np.sin(pa)
+    x_rot, y_rot = _rot(x_shift, y_shift, cos_pa, sin_pa)
+    # q=1（球対称）は級数が 1 項で正確に power-law になるので、SIE と違って上側の clip は不要。下側だけ clip
+    q = float(np.clip(q, 1e-5, 1.0))
+    t = float(slope) - 1.0  # 2D密度の冪、t=1 で等温
+    b_tm = b * np.sqrt(q) # so that b follows the same convention as ``deflection_SIE``
+    radius = np.hypot(q * x_rot, y_rot) # Eq (3) major-axis frame
+    center = radius == 0.0
+    safe_radius = np.where(center, 1.0, radius)
+    phi = np.arctan2(y_rot, q * x_rot)
+    alpha = 2.0 * b_tm / (1.0 + q) * (b_tm / safe_radius) ** (t - 1.0) * _epl_omega(phi, t, q)
+    # lens 中心（測度ゼロの特異点）では deflection_SIE と同じく 0 を返す（slope>2 では発散、slope<2 では 0、t=1 では方向依存で不定）。
+    alpha = np.where(center, 0.0, alpha)
+    alpha_x, alpha_y = _irot(alpha.real, alpha.imag, cos_pa, sin_pa)
+    return alpha_x, alpha_y
+
+
+def deflection_EPL_plus_ES(xx, yy, x0, y0, b, q, pa, gamma1, gamma2, kappa, slope):
+    """
+    Combined deflection from EPL + external shear.
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
+    """
+    alpha_x_epl, alpha_y_epl = deflection_EPL(xx, yy, x0, y0, b, q, pa, slope)
+    alpha_x_es, alpha_y_es = deflection_ES(xx, yy, x0, y0, gamma1, gamma2, kappa)
+    return alpha_x_epl + alpha_x_es, alpha_y_epl + alpha_y_es
+
+
 # Combined SIE + external shear
 def deflection_SIE_plus_ES(xx, yy, x0, y0, b, q, pa, gamma1, gamma2, kappa):
     """
@@ -206,7 +290,45 @@ def deflection_jacobian_SIE_plus_ES(
     sie = deflection_jacobian_SIE(xx, yy, x0, y0, b, q, pa)
     shear = deflection_jacobian_ES(xx, yy, gamma1, gamma2, kappa)
     return tuple(sie_term + shear_term for sie_term, shear_term in zip(sie, shear))
+
+
+def deflection_jacobian_EPL(xx, yy, x0, y0, b, q, pa, slope):
+    """
+    critical lines / caustics を計算するときに使う解析式
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
+
+    Returns
+    -------
+    A tuple of 2D arrays (dα_x/dx, dα_x/dy, dα_y/dx, dα_y/dy) representing the Jacobian matrix (= 1 - A)
+    """
+    alpha_x, alpha_y = deflection_EPL(xx, yy, x0, y0, b, q, pa, slope)
+    x_shift = xx - x0
+    y_shift = yy - y0
+    x_rot, y_rot = _rot(x_shift, y_shift, np.cos(pa), np.sin(pa))
+    q = float(np.clip(q, 1e-5, 1.0)) 
+    t = float(slope) - 1.0
+    b_tm = b * np.sqrt(q)
+    radius = np.hypot(q * x_rot, y_rot)
+    singular = radius == 0.0
+    kappa = (2.0 - t) / 2.0 * (b_tm / np.where(singular, 1.0, radius)) ** t # Eq (2)
+    z = x_shift + 1j * y_shift
+    gamma = ((1.0 - t) * (alpha_x + 1j * alpha_y) - kappa * z) / np.conj(np.where(singular, 1.0, z)) # Eq (16)
     
+    # 1 - A matrix
+    # lens 中心では deflection_jacobian_SIE と同じく nan
+    return tuple(np.where(singular, np.nan, derivative) for derivative in (
+        kappa + gamma.real, gamma.imag, gamma.imag, kappa - gamma.real,
+    ))
+
+
+def deflection_jacobian_EPL_plus_ES(xx, yy, x0, y0, b, q, pa, gamma1, gamma2, kappa, slope):
+    """Analytic derivatives of the combined EPL and external-shear deflection.
+    pa: in radians, measured from +x (west) to major axis, counter-clockwise.
+    """
+    epl = deflection_jacobian_EPL(xx, yy, x0, y0, b, q, pa, slope)
+    shear = deflection_jacobian_ES(xx, yy, gamma1, gamma2, kappa)
+    return tuple(epl_term + shear_term for epl_term, shear_term in zip(epl, shear))
+
 
 # -------------------------- Mapping source to image -------------------------- #
 def make_grid_arcsec(nx, ny, pixscale_arcsec, x0_arcsec=0.0, y0_arcsec=0.0):
@@ -806,3 +928,60 @@ def compute_critical_lines_and_caustics(
         "critical_lines_pix": critical_lines_pix,
         "caustics_pix": caustics_pix,
     }
+
+
+def critical_lines_and_caustics_EPL_plus_ES(x0, y0, b, q, pa, gamma1, gamma2, kappa, slope, n_phi=2000):
+    """
+    Critical lines and caustics of EPL + external shear without a grid (contour 不要).
+
+    楕円角 φ（deflection_EPL の phi）を固定すると、u = (b_TM/R)^t として EPL の κ = K u、γ = G(φ) u
+    （K = (2−t)/2、G は deflection_jacobian_EPL の式に z = R w(φ)、w = cos φ/q + i sin φ を入れたもの）で、
+    外部 shear と kappa は定数。よって det A = (1 − kappa − K u)² − |γ_ext + G u|² = 0 は u の 2 次方程式
+        a u² − 2B u + c = 0,  a = K² − |G|²,  B = (1 − kappa) K + Re(γ_ext* G),  c = (1 − kappa)² − |γ_ext|²
+    になり、各 φ で解ける。小さい方の正根（R が大きい方）が tangential、a > 0 の方向だけにある大きい方の根が radial。
+    SIE（slope=2）は a = 0 で radial は中心に潰れる。slope>2 は a < 0 で tangential のみ。
+    |γ_ext| < 1 − kappa（c > 0）を仮定する。
+
+    Parameters
+    ----------
+    x0, y0, b, q, pa, gamma1, gamma2, kappa, slope :
+        Same as ``deflection_EPL_plus_ES``.
+    n_phi : int
+        Number of points along each curve.
+
+    Returns
+    -------
+    critical_lines, caustics : list of ndarray[(n_phi, 2)]
+        [tangential] or [tangential, radial], in arcsec (columns = [x, y]).
+        radial が一部の φ にしか無い場合、無い φ は nan（matplotlib では途切れて描かれる）。
+    """
+    q = float(np.clip(q, 1e-5, 1.0))  # deflection_EPL と同じ
+    t = float(slope) - 1.0
+    b_tm = b * np.sqrt(q)
+    phi = np.linspace(0.0, 2.0 * np.pi, n_phi)
+    w = np.cos(phi) / q + 1j * np.sin(phi)  # lens 主軸系で z = R w(φ)
+    K = (2.0 - t) / 2.0
+    G = (2.0 * (1.0 - t) / (1.0 + q) * _epl_omega(phi, t, q) - K * w) / np.conj(w)
+    gamma_ext = (gamma1 + 1j * gamma2) * np.exp(-2j * pa)  # 外部 shear を lens 主軸系へ（spin 2）
+    a = K**2 - np.abs(G)**2
+    B = (1.0 - kappa) * K + np.real(np.conj(gamma_ext) * G)
+    c = (1.0 - kappa)**2 - np.abs(gamma_ext)**2
+    discriminant = B**2 - a * c
+    root = np.sqrt(np.where(discriminant >= 0.0, discriminant, np.nan))
+    u_tangential = c / (B + root)  # = (B − root)/a。この形なら a → 0（SIE）でも割り算が安定
+    has_radial = a > 1e-12  # SIE は a = 0 だが丸め誤差で ±1e-17 程度になり、中心に偽の radial が出るので閾値を置く
+    u_radial = np.where(has_radial, (B + root) / np.where(has_radial, a, 1.0), np.nan)
+
+    deflector_kwargs = dict(x0=x0, y0=y0, b=b, q=q, pa=pa, gamma1=gamma1, gamma2=gamma2, kappa=kappa, slope=slope)
+    critical_lines = []
+    caustics = []
+    for u in (u_tangential, u_radial):
+        u = np.where(u > 0.0, u, np.nan)
+        if not np.any(np.isfinite(u)):
+            continue
+        z_rot = b_tm * u ** (-1.0 / t) * w  # R = b_TM u^(−1/t)
+        x, y = _irot(z_rot.real, z_rot.imag, np.cos(pa), np.sin(pa))
+        curve = np.column_stack([x + x0, y + y0])
+        critical_lines.append(curve)
+        caustics.append(map_curve_to_source(curve, deflection_EPL_plus_ES, deflector_kwargs))
+    return critical_lines, caustics
